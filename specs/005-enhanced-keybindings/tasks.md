@@ -29,13 +29,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T001 Create KeyBinding struct with key and modifiers fields in src/util/keys.rs
-- [ ] T002 Add crossterm::event::KeyEvent and KeyModifiers imports in src/util/keys.rs
-- [ ] T003 Create parse_key_string() function to parse single key strings in src/util/keys.rs
-- [ ] T004 Create helper function to create KeyBinding from char in src/util/keys.rs
-- [ ] T005 Update key_to_action() signature from KeyCode to &KeyEvent in src/util/keys.rs
-- [ ] T006 Update handle_keyboard_input() to accept KeyEvent in src/event_handler.rs
-- [ ] T007 Update main.rs event loop to pass full KeyEvent instead of key.code
+- [x] T001 Create KeyBinding struct with key and modifiers fields in src/util/keys.rs
+- [x] T002 Add crossterm::event::KeyEvent and KeyModifiers imports in src/util/keys.rs
+- [x] T003 Create parse_key_string() function to parse single key strings in src/util/keys.rs
+- [x] T004 Create helper function to create KeyBinding from char in src/util/keys.rs
+- [x] T005 Update key_to_action() signature from KeyCode to &KeyEvent in src/util/keys.rs
+- [x] T006 Update handle_keyboard_input() to accept KeyEvent in src/event_handler.rs
+- [x] T007 Update main.rs event loop to pass full KeyEvent instead of key.code
 
 **Checkpoint**: Foundation ready - KeyBinding type exists, event flow passes KeyEvent
 
@@ -49,13 +49,13 @@
 
 ### Implementation for User Stories 1 & 3
 
-- [ ] T008 [US1] Change KeyConfig fields from char to Vec<KeyBinding> in src/util/keys.rs
-- [ ] T009 [US1] Create parse_bindings() function to handle Value polymorphism (string vs array) in src/util/keys.rs
-- [ ] T010 [US1] Update lazy_static KEY_CONFIG block to use parse_bindings() for each action in src/util/keys.rs
-- [ ] T011 [US1] Create default_binding() helper for fallback defaults in src/util/keys.rs
-- [ ] T012 [US1] Update key_to_action() to iterate Vec<KeyBinding> and match first in src/util/keys.rs
-- [ ] T013 [US1] Add named key support (space, tab, enter, esc, backspace) to parse_key_string() in src/util/keys.rs
-- [ ] T014 [US3] Ensure single string config values parse correctly as single-element Vec in src/util/keys.rs
+- [x] T008 [US1] Change KeyConfig fields from char to Vec<KeyBinding> in src/util/keys.rs
+- [x] T009 [US1] Create parse_bindings() function to handle Value polymorphism (string vs array) in src/util/keys.rs
+- [x] T010 [US1] Update lazy_static KEY_CONFIG block to use parse_bindings() for each action in src/util/keys.rs
+- [x] T011 [US1] Create default_binding() helper for fallback defaults in src/util/keys.rs
+- [x] T012 [US1] Update key_to_action() to iterate Vec<KeyBinding> and match first in src/util/keys.rs
+- [x] T013 [US1] Add named key support (space, tab, enter, esc, backspace) to parse_key_string() in src/util/keys.rs
+- [x] T014 [US3] Ensure single string config values parse correctly as single-element Vec in src/util/keys.rs
 
 **Checkpoint**: User Stories 1 & 3 complete - array syntax and backwards compatibility both work
 
@@ -69,10 +69,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add C- prefix detection (case-insensitive) to parse_key_string() in src/util/keys.rs
-- [ ] T016 [US2] Set KeyModifiers::CONTROL when C- prefix detected in src/util/keys.rs
-- [ ] T017 [US2] Update KeyBinding matching in key_to_action() to compare modifiers in src/util/keys.rs
-- [ ] T018 [US2] Handle edge case: strip SHIFT modifier for comparison (terminals report Ctrl+Shift for some keys) in src/util/keys.rs
+- [x] T015 [US2] Add C- prefix detection (case-insensitive) to parse_key_string() in src/util/keys.rs
+- [x] T016 [US2] Set KeyModifiers::CONTROL when C- prefix detected in src/util/keys.rs
+- [x] T017 [US2] Update KeyBinding matching in key_to_action() to compare modifiers in src/util/keys.rs
+- [x] T018 [US2] Handle edge case: strip SHIFT modifier for comparison (terminals report Ctrl+Shift for some keys) in src/util/keys.rs
 
 **Checkpoint**: User Story 2 complete - C-e, C-y, C-d etc. all work
 
@@ -82,10 +82,10 @@
 
 **Purpose**: Documentation and cleanup
 
-- [ ] T019 [P] Update README.md keyboard configuration section with new array and C- syntax
-- [ ] T020 [P] Add config examples to README.md showing mixed old/new syntax
-- [ ] T021 Run quickstart.md manual test scenarios
-- [ ] T022 Build and verify no compiler warnings with cargo build
+- [x] T019 [P] Update README.md keyboard configuration section with new array and C- syntax
+- [x] T020 [P] Add config examples to README.md showing mixed old/new syntax
+- [x] T021 Run quickstart.md manual test scenarios
+- [x] T022 Build and verify no compiler warnings with cargo build
 
 ---
 

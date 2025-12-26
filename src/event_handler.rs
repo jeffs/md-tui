@@ -1,6 +1,6 @@
 use std::{cmp, fs::read_to_string};
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEvent};
 use notify::{PollWatcher, Watcher};
 
 use crate::{
@@ -21,14 +21,14 @@ pub enum KeyBoardAction {
 }
 
 pub fn handle_keyboard_input(
-    key: KeyCode,
+    key: KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     file_tree: &mut FileTree,
     height: u16,
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
-    if key == KeyCode::Char('q') && app.boxes != Boxes::Search {
+    if key.code == KeyCode::Char('q') && app.boxes != Boxes::Search {
         return KeyBoardAction::Exit;
     }
     match app.mode {
@@ -38,7 +38,7 @@ pub fn handle_keyboard_input(
 }
 
 pub fn keyboard_mode_file_tree(
-    key: KeyCode,
+    key: KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     file_tree: &mut FileTree,
@@ -46,13 +46,13 @@ pub fn keyboard_mode_file_tree(
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     match app.boxes {
-        Boxes::Error => match key {
+        Boxes::Error => match key.code {
             KeyCode::Enter | KeyCode::Esc => {
                 app.boxes = Boxes::None;
             }
             _ => {}
         },
-        Boxes::Search => match key {
+        Boxes::Search => match key.code {
             KeyCode::Esc => {
                 app.search_box.clear();
                 file_tree.search(None);
@@ -82,7 +82,7 @@ pub fn keyboard_mode_file_tree(
             }
             _ => {}
         },
-        Boxes::None => match key_to_action(key) {
+        Boxes::None => match key_to_action(&key) {
             Action::Down => {
                 file_tree.next(height);
             }
@@ -178,7 +178,7 @@ pub fn keyboard_mode_file_tree(
             _ => {}
         },
         Boxes::LinkPreview => {
-            if key == KeyCode::Esc {
+            if key.code == KeyCode::Esc {
                 app.boxes = Boxes::None;
             }
         }
@@ -188,20 +188,20 @@ pub fn keyboard_mode_file_tree(
 }
 
 fn keyboard_mode_view(
-    key: KeyCode,
+    key: KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     height: u16,
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     match app.boxes {
-        Boxes::Error => match key {
+        Boxes::Error => match key.code {
             KeyCode::Enter | KeyCode::Esc => {
                 app.boxes = Boxes::None;
             }
             _ => {}
         },
-        Boxes::Search => match key {
+        Boxes::Search => match key.code {
             KeyCode::Esc => {
                 app.search_box.clear();
                 app.boxes = Boxes::None;
@@ -243,7 +243,7 @@ fn keyboard_mode_view(
             }
             _ => {}
         },
-        Boxes::None => match key_to_action(key) {
+        Boxes::None => match key_to_action(&key) {
             Action::Down => {
                 if app.selected {
                     app.select_index = cmp::min(app.select_index + 1, markdown.num_links() - 1);
@@ -557,7 +557,7 @@ fn keyboard_mode_view(
             _ => {}
         },
         Boxes::LinkPreview => {
-            if key == KeyCode::Esc {
+            if key.code == KeyCode::Esc {
                 app.boxes = Boxes::None;
             }
         }
