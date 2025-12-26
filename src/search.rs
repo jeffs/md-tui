@@ -21,7 +21,7 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
     }
 }
 
-pub fn find_md_files_channel(tx: Sender<Option<MdFile>>) {
+pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std::path::PathBuf>) {
     let mut ignored_files = Vec::new();
 
     if GENERAL_CONFIG.gitignore {
@@ -30,7 +30,20 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>) {
 
     let mut stack = VecDeque::new();
 
-    stack.push_back(std::path::PathBuf::from("."));
+    // Process starting paths: files go directly to output, directories go to stack
+    for path in starting_paths {
+        if path.is_dir() {
+            stack.push_back(path);
+        } else if path.is_file() && path.extension().unwrap_or_default() == "md" {
+            if let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name()) {
+                tx.send(Some(MdFile::new(
+                    path_str.to_string(),
+                    path_name.to_str().unwrap_or("UNKNOWN").to_string(),
+                )))
+                .unwrap();
+            }
+        }
+    }
 
     while let Some(path) = stack.pop_front() {
         for entry in if let Ok(entries) = std::fs::read_dir(&path) {

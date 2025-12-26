@@ -60,9 +60,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
-    let (f_tx, f_rx) = mpsc::channel::<Option<MdFile>>();
+    let args: Vec<String> = std::env::args().skip(1).collect();
 
-    thread::spawn(move || find_md_files_channel(f_tx.clone()));
+    // Determine starting paths for file tree search
+    let starting_paths: Vec<std::path::PathBuf> = if args.is_empty() {
+        vec![std::path::PathBuf::from(".")]
+    } else {
+        args.iter().map(std::path::PathBuf::from).collect()
+    };
+
+    let (f_tx, f_rx) = mpsc::channel::<Option<MdFile>>();
+    thread::spawn(move || find_md_files_channel(f_tx, starting_paths));
 
     let mut last_tick = Instant::now();
 
@@ -80,19 +88,23 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
     let potential_input = io::stdin();
     let mut stdin_buf = String::new();
 
-    let args: Vec<String> = std::env::args().collect();
-    if let Some(arg) = args.get(1) {
-        if let Ok(file) = read_to_string(arg) {
-            let path = std::path::Path::new(arg);
-            let _ = watcher.watch(path, notify::RecursiveMode::NonRecursive);
-            markdown = parse_markdown(Some(arg), &file, app.width() - 2);
-            app.mode = Mode::View;
-        } else {
-            app.message_box
-                .set_message(format!("Could not open file {arg}"));
-            app.boxes = Boxes::Error;
+    // Single file argument: open directly (preserve original behavior)
+    if args.len() == 1 {
+        let arg = &args[0];
+        let path = std::path::Path::new(arg);
+        if path.is_file() {
+            if let Ok(file) = read_to_string(arg) {
+                let _ = watcher.watch(path, notify::RecursiveMode::NonRecursive);
+                markdown = parse_markdown(Some(arg), &file, app.width() - 2);
+                app.mode = Mode::View;
+            } else {
+                app.message_box
+                    .set_message(format!("Could not open file {arg}"));
+                app.boxes = Boxes::Error;
+            }
         }
-    } else if !potential_input.is_terminal() {
+        // If single arg is a directory, fall through to file tree mode
+    } else if args.is_empty() && !potential_input.is_terminal() {
         let _ = potential_input.lock().read_to_string(&mut stdin_buf);
         markdown = parse_markdown(None, &stdin_buf, app.width() - 2);
         app.mode = Mode::View;
