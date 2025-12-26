@@ -146,7 +146,7 @@ pub fn keyboard_mode_file_tree(
                         file
                     } else {
                         app.error_box
-                            .set_message(format!("Could not open file {}", e));
+                            .set_message(format!("Could not open file {e}"));
                         app.boxes = Boxes::Error;
                         return KeyBoardAction::Continue;
                     };
@@ -307,9 +307,9 @@ fn keyboard_mode_view(
                     let link = markdown.selected();
 
                     let message = match LinkType::from(link) {
-                        LinkType::Internal(e) => format!("Internal link: {}", e),
-                        LinkType::External(e) => format!("External link: {}", e),
-                        LinkType::MarkdownFile(e) => format!("Markdown file: {}", e),
+                        LinkType::Internal(e) => format!("Internal link: {e}"),
+                        LinkType::External(e) => format!("External link: {e}"),
+                        LinkType::MarkdownFile(e) => format!("Markdown file: {e}"),
                     };
 
                     app.link_box.set_message(message);
@@ -440,7 +440,7 @@ fn keyboard_mode_view(
                             cmp::min(index, markdown.height().saturating_sub(height / 2))
                         } else {
                             app.error_box
-                                .set_message(format!("Could not find heading {}", heading));
+                                .set_message(format!("Could not find heading {heading}"));
                             app.boxes = Boxes::Error;
                             markdown.deselect();
                             return KeyBoardAction::Continue;
@@ -474,7 +474,7 @@ fn keyboard_mode_view(
                             file
                         } else {
                             app.error_box
-                                .set_message(format!("Could not open file {}", url));
+                                .set_message(format!("Could not open file {url}"));
                             app.boxes = Boxes::Error;
                             return KeyBoardAction::Continue;
                         };
@@ -491,7 +491,7 @@ fn keyboard_mode_view(
                                 cmp::min(index, markdown.height().saturating_sub(height / 2))
                             } else {
                                 app.error_box
-                                    .set_message(format!("Could not find heading {}", heading));
+                                    .set_message(format!("Could not find heading {heading}"));
                                 app.boxes = Boxes::Error;
                                 0
                             }
@@ -514,7 +514,7 @@ fn keyboard_mode_view(
                         file
                     } else {
                         app.error_box
-                            .set_message(format!("Could not open file {}", e));
+                            .set_message(format!("Could not open file {e}"));
                         app.boxes = Boxes::Error;
                         return KeyBoardAction::Continue;
                     };

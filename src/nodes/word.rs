@@ -98,6 +98,7 @@ pub struct Word {
 }
 
 impl Word {
+    #[must_use] 
     pub fn new(content: String, word_type: WordType) -> Self {
         Self {
             word_type,
@@ -106,6 +107,7 @@ impl Word {
         }
     }
 
+    #[must_use] 
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -118,6 +120,7 @@ impl Word {
         self.content = content.into();
     }
 
+    #[must_use] 
     pub fn kind(&self) -> WordType {
         self.word_type
     }
@@ -132,6 +135,7 @@ impl Word {
         self.previous_type = None;
     }
 
+    #[must_use] 
     pub fn is_renderable(&self) -> bool {
         !matches!(self.kind(), WordType::MetaInfo(_) | WordType::LinkData)
     }
