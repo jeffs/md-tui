@@ -1,6 +1,5 @@
 use std::{
     cmp, env,
-    error::Error,
     fs::read_to_string,
     io::{self, IsTerminal, Read},
     panic,
@@ -34,8 +33,7 @@ use ratatui_image::{FilterType, Resize, StatefulImage};
 
 const EMPTY_FILE: &str = "";
 
-#[expect(clippy::unnecessary_wraps, reason = "main returns Result for consistency with error handling pattern")]
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     // Set up panic handler. If not set up, the terminal will be left in a broken state if a panic
     // occurs
     panic::set_hook(Box::new(|panic_info| {
@@ -56,11 +54,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     if let Err(err) = res {
         println!("{err:?}");
     }
-
-    Ok(())
 }
 
-#[expect(clippy::too_many_lines, reason = "main event loop is complex but cohesive")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "main event loop is complex but cohesive"
+)]
 fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -217,26 +216,27 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if event::poll(timeout)?
-            && let Event::Key(key) = event::read()? {
-                match handle_keyboard_input(
-                    key,
-                    &mut app,
-                    &mut markdown,
-                    &mut file_tree,
-                    height,
-                    &mut watcher,
-                ) {
-                    KeyBoardAction::Exit => {
-                        return Ok(());
-                    }
-                    KeyBoardAction::Continue => {}
-                    KeyBoardAction::Edit => {
-                        terminal.draw(|f| {
-                            open_editor(f, &mut app, markdown.file_name());
-                        })?;
-                    }
+            && let Event::Key(key) = event::read()?
+        {
+            match handle_keyboard_input(
+                key,
+                &mut app,
+                &mut markdown,
+                &mut file_tree,
+                height,
+                &mut watcher,
+            ) {
+                KeyBoardAction::Exit => {
+                    return Ok(());
+                }
+                KeyBoardAction::Continue => {}
+                KeyBoardAction::Edit => {
+                    terminal.draw(|f| {
+                        open_editor(f, &mut app, markdown.file_name());
+                    })?;
                 }
             }
+        }
         if last_tick.elapsed() >= tick_rate {
             last_tick = Instant::now();
         }
