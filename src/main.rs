@@ -256,8 +256,8 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
     };
     f.render_widget(file_tree, area);
 
-    // Only render Help bar area if help_bar is enabled or expanded
-    if !GENERAL_CONFIG.help_bar && !app.help_box.expanded() {
+    // Only render help box if enabled or expanded
+    if !GENERAL_CONFIG.help_box && !app.help_box.expanded() {
         return;
     }
 
@@ -314,8 +314,8 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
         }
     };
 
-    // Adjust content area height based on Help bar visibility
-    let content_height = if GENERAL_CONFIG.help_bar || app.help_box.expanded() {
+    // Adjust content area height based on help box visibility
+    let content_height = if GENERAL_CONFIG.help_box || app.help_box.expanded() {
         size.height - 5
     } else {
         size.height
@@ -374,8 +374,8 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
         }
     }
 
-    // Only render Help bar area if help_bar is enabled or expanded
-    if !GENERAL_CONFIG.help_bar && !app.help_box.expanded() {
+    // Only render help box if enabled or expanded
+    if !GENERAL_CONFIG.help_box && !app.help_box.expanded() {
         return;
     }
 
