@@ -104,6 +104,7 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
     tx.send(None).unwrap();
 }
 
+#[must_use] 
 pub fn find_md_files() -> FileTree {
     let mut ignored_files = Vec::new();
 
@@ -158,19 +159,20 @@ pub fn find_md_files() -> FileTree {
     tree
 }
 
+#[must_use] 
 pub fn find_files(files: &[MdFile], query: &str) -> Vec<MdFile> {
     if query.is_empty() {
         return files.to_vec();
     }
 
     // Check if any char in the query is uppercase, making the search case sensitive
-    let case_sensitive = query.chars().any(|c| c.is_uppercase());
+    let case_sensitive = query.chars().any(char::is_uppercase);
 
     files
         .iter()
         .filter(|file| {
             let file_path = if case_sensitive {
-                file.path.to_owned()
+                file.path.clone()
             } else {
                 file.path.to_lowercase()
             };
@@ -182,6 +184,7 @@ pub fn find_files(files: &[MdFile], query: &str) -> Vec<MdFile> {
         .collect()
 }
 
+#[must_use] 
 pub fn find_with_backoff(query: &str, text: &str) -> Vec<usize> {
     let precision = 0;
     let mut result = find(query, text, precision);
@@ -192,10 +195,11 @@ pub fn find_with_backoff(query: &str, text: &str) -> Vec<usize> {
     result
 }
 
+#[must_use] 
 pub fn find(query: &str, text: &str, precision: usize) -> Vec<usize> {
     let mut result = Vec::new();
 
-    let case_sensitive = query.chars().any(|c| c.is_uppercase());
+    let case_sensitive = query.chars().any(char::is_uppercase);
 
     char_windows(text, query.len())
         .enumerate()
@@ -215,6 +219,7 @@ pub fn find(query: &str, text: &str, precision: usize) -> Vec<usize> {
 }
 
 /// Returns line numbers that match the query with the given precision.
+#[must_use] 
 pub fn line_match(query: &str, text: Vec<&str>, precision: usize) -> Vec<usize> {
     text.iter()
         .enumerate()
@@ -228,6 +233,7 @@ pub fn line_match(query: &str, text: Vec<&str>, precision: usize) -> Vec<usize> 
         .collect()
 }
 
+#[must_use] 
 pub fn line_match_and_index(
     query: &str,
     lines: Vec<&str>,
@@ -244,6 +250,7 @@ pub fn line_match_and_index(
         .collect()
 }
 
+#[must_use] 
 pub fn find_with_ref<'a>(query: &str, text: Vec<&'a Word>) -> Vec<&'a Word> {
     let window_size = query
         .split_whitespace()
@@ -257,10 +264,10 @@ pub fn find_with_ref<'a>(query: &str, text: Vec<&'a Word>) -> Vec<&'a Word> {
     text.windows(window_size)
         .filter(|word| {
             let mut words = word.iter().map(|c| c.content()).join("");
-            let case_sensitive = query.chars().any(|c| c.is_uppercase());
+            let case_sensitive = query.chars().any(char::is_uppercase);
 
             words = if case_sensitive {
-                words.to_owned()
+                words.clone()
             } else {
                 words.to_lowercase()
             };
@@ -284,10 +291,10 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
 
     windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
         let mut words = window.iter().map(|c| c.content()).join("");
-        let case_sensitive = query.chars().any(|c| c.is_uppercase());
+        let case_sensitive = query.chars().any(char::is_uppercase);
 
         words = if case_sensitive {
-            words.to_owned()
+            words.clone()
         } else {
             words.to_lowercase()
         };
@@ -297,7 +304,7 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
                 .iter_mut()
                 .for_each(|word| word.set_kind(WordType::Selected));
         }
-    })
+    });
 }
 
 fn windows_mut_for_each<T>(v: &mut [T], n: usize, f: impl Fn(&mut [T])) {
@@ -311,7 +318,7 @@ fn windows_mut_for_each<T>(v: &mut [T], n: usize, f: impl Fn(&mut [T])) {
 }
 
 fn char_windows(src: &str, win_size: usize) -> impl Iterator<Item = &'_ str> {
-    src.char_indices().flat_map(move |(from, _)| {
+    src.char_indices().filter_map(move |(from, _)| {
         src[from..]
             .char_indices()
             .nth(win_size - 1)
@@ -319,6 +326,7 @@ fn char_windows(src: &str, win_size: usize) -> impl Iterator<Item = &'_ str> {
     })
 }
 
+#[must_use] 
 pub fn compare_heading(link_header: &str, header: &[Vec<Word>]) -> bool {
     let header: String = header
         .iter()

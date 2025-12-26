@@ -43,6 +43,7 @@ pub struct ColorConfig {
     pub quote_default: Color,
 }
 
+#[must_use] 
 pub fn read_color_config_from_file() -> ColorConfig {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir.join(".config").join("mdt").join("config.toml");
@@ -198,6 +199,7 @@ pub struct HeadingColors {
     pub level_6: Color,
 }
 
+#[must_use] 
 pub fn read_heading_colors_from_file() -> HeadingColors {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir.join(".config").join("mdt").join("config.toml");
