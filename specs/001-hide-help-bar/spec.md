@@ -38,21 +38,6 @@ A user wants to temporarily hide the Help bar for a specific session or set it s
 
 ---
 
-### User Story 3 - Hide Help Bar via CLI Flag (Priority: P3)
-
-A user wants to hide the Help bar for a single invocation of mdt using a command-line flag, useful for scripts, aliases, or one-off usage.
-
-**Why this priority**: CLI flags provide the highest specificity for single invocations but are less commonly used for persistent preferences.
-
-**Independent Test**: Can be fully tested by running `mdt --no-help-bar <file>` and verifying the Help bar is not displayed.
-
-**Acceptance Scenarios**:
-
-1. **Given** mdt is invoked with `--no-help-bar` flag, **When** viewing a markdown file, **Then** the Help bar is not displayed.
-2. **Given** config file has `help_bar = true`, **When** mdt is invoked with `--no-help-bar` flag, **Then** the CLI flag takes precedence and the Help bar is hidden.
-
----
-
 ### Edge Cases
 
 - What happens when an invalid value is provided for `help_bar` in config (e.g., a string instead of boolean)? The system should use the default (show Help bar) and optionally warn.
@@ -64,11 +49,10 @@ A user wants to hide the Help bar for a single invocation of mdt using a command
 
 - **FR-001**: System MUST support a `help_bar` boolean configuration option in the config file (`~/.config/mdt/config.toml`) to control Help bar visibility.
 - **FR-002**: System MUST support an `MDT_HELP_BAR` environment variable to control Help bar visibility, following the existing `MDT_` prefix convention.
-- **FR-003**: System MUST support a `--no-help-bar` CLI flag to hide the Help bar for a single invocation.
-- **FR-004**: System MUST maintain the current default behavior of showing the Help bar when no configuration is specified.
-- **FR-005**: System MUST preserve `?` key functionality to show the expanded help panel regardless of Help bar visibility setting.
-- **FR-006**: System MUST apply configuration precedence in order: CLI flag > environment variable > config file > default (show).
-- **FR-007**: System MUST reclaim the screen space used by the Help bar (typically 3 lines when collapsed) for content display when the Help bar is hidden.
+- **FR-003**: System MUST maintain the current default behavior of showing the Help bar when no configuration is specified.
+- **FR-004**: System MUST preserve `?` key functionality to show the expanded help panel regardless of Help bar visibility setting.
+- **FR-005**: System MUST apply configuration precedence in order: environment variable > config file > default (show), consistent with existing settings.
+- **FR-006**: System MUST reclaim the screen space used by the Help bar (typically 3 lines when collapsed) for content display when the Help bar is hidden.
 
 ## Success Criteria *(mandatory)*
 
@@ -82,9 +66,8 @@ A user wants to hide the Help bar for a single invocation of mdt using a command
 ## Assumptions
 
 - The configuration option name `help_bar` follows the snake_case convention used in the existing config file.
-- The environment variable `MDT_HELP_BAR` follows the existing pattern of `MDT_` prefix with underscore separator.
+- The environment variable `MDT_HELP_BAR` follows the existing pattern of `MDT_` prefix with underscore separator, handled automatically by the existing config system.
 - Boolean parsing for config/env will accept standard truthy/falsy values (true/false, 1/0, yes/no).
-- The CLI flag uses `--no-help-bar` (double-dash, negative form) following common CLI conventions for disabling features.
 
 ## Out of Scope
 
