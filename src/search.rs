@@ -23,7 +23,10 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
 
 /// # Panics
 /// Panics if the channel receiver is disconnected.
-#[expect(clippy::needless_pass_by_value, reason = "Sender is typically passed by value in channel patterns")]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Sender is typically passed by value in channel patterns"
+)]
 pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std::path::PathBuf>) {
     let mut ignored_files = Vec::new();
 
@@ -37,14 +40,16 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
     for path in starting_paths {
         if path.is_dir() {
             stack.push_back(path);
-        } else if path.is_file() && path.extension().unwrap_or_default() == "md"
-            && let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name()) {
-                tx.send(Some(MdFile::new(
-                    path_str.to_string(),
-                    path_name.to_str().unwrap_or("UNKNOWN").to_string(),
-                )))
-                .unwrap();
-            }
+        } else if path.is_file()
+            && path.extension().unwrap_or_default() == "md"
+            && let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name())
+        {
+            tx.send(Some(MdFile::new(
+                path_str.to_string(),
+                path_name.to_str().unwrap_or("UNKNOWN").to_string(),
+            )))
+            .unwrap();
+        }
     }
 
     while let Some(path) = stack.pop_front() {
@@ -103,7 +108,7 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
     tx.send(None).unwrap();
 }
 
-#[must_use] 
+#[must_use]
 pub fn find_md_files() -> FileTree {
     let mut ignored_files = Vec::new();
 
@@ -158,7 +163,7 @@ pub fn find_md_files() -> FileTree {
     tree
 }
 
-#[must_use] 
+#[must_use]
 pub fn find_files(files: &[MdFile], query: &str) -> Vec<MdFile> {
     if query.is_empty() {
         return files.to_vec();
@@ -183,7 +188,7 @@ pub fn find_files(files: &[MdFile], query: &str) -> Vec<MdFile> {
         .collect()
 }
 
-#[must_use] 
+#[must_use]
 pub fn find_with_backoff(query: &str, text: &str) -> Vec<usize> {
     let precision = 0;
     let mut result = find(query, text, precision);
@@ -194,7 +199,7 @@ pub fn find_with_backoff(query: &str, text: &str) -> Vec<usize> {
     result
 }
 
-#[must_use] 
+#[must_use]
 pub fn find(query: &str, text: &str, precision: usize) -> Vec<usize> {
     let mut result = Vec::new();
 
@@ -233,11 +238,7 @@ pub fn line_match(query: &str, text: &[&str], precision: usize) -> Vec<usize> {
 }
 
 #[must_use]
-pub fn line_match_and_index(
-    query: &str,
-    lines: &[&str],
-    precision: usize,
-) -> Vec<(usize, usize)> {
+pub fn line_match_and_index(query: &str, lines: &[&str], precision: usize) -> Vec<(usize, usize)> {
     lines
         .iter()
         .enumerate()
@@ -325,7 +326,7 @@ fn char_windows(src: &str, win_size: usize) -> impl Iterator<Item = &'_ str> {
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn compare_heading(link_header: &str, header: &[Vec<Word>]) -> bool {
     let header: String = header
         .iter()

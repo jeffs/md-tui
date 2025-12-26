@@ -37,8 +37,14 @@ pub fn handle_keyboard_input(
     }
 }
 
-#[expect(clippy::too_many_lines, reason = "keybinding dispatch must be in one place to see all cases; splitting would scatter related logic")]
-#[expect(clippy::cast_possible_truncation, reason = "UI positions bounded by terminal size")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "keybinding dispatch must be in one place to see all cases; splitting would scatter related logic"
+)]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "UI positions bounded by terminal size"
+)]
 pub fn keyboard_mode_file_tree(
     key: KeyEvent,
     app: &mut App,
@@ -187,8 +193,14 @@ pub fn keyboard_mode_file_tree(
     KeyBoardAction::Continue
 }
 
-#[expect(clippy::too_many_lines, reason = "keybinding dispatch must be in one place to see all cases; splitting would scatter related logic")]
-#[expect(clippy::cast_possible_truncation, reason = "UI positions bounded by terminal size")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "keybinding dispatch must be in one place to see all cases; splitting would scatter related logic"
+)]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "UI positions bounded by terminal size"
+)]
 fn keyboard_mode_view(
     key: KeyEvent,
     app: &mut App,

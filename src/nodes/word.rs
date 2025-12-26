@@ -107,8 +107,8 @@ impl Word {
         }
     }
 
-    pub fn previous_type(&self) -> WordType {
-        self.previous_type.unwrap_or(self.word_type)
+    pub fn previous_kind(&self) -> WordType {
+        self.previous_kind.unwrap_or(self.kind)
     }
 
     #[must_use]
@@ -139,7 +139,7 @@ impl Word {
         self.previous_kind = None;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_renderable(&self) -> bool {
         !matches!(
             self.kind(),

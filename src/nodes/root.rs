@@ -13,7 +13,7 @@ pub struct ComponentRoot {
 }
 
 impl ComponentRoot {
-    #[must_use] 
+    #[must_use]
     pub fn new(file_name: Option<String>, components: Vec<Component>) -> Self {
         Self {
             file_name,
@@ -22,7 +22,7 @@ impl ComponentRoot {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn children(&self) -> Vec<&Component> {
         self.components.iter().collect()
     }
@@ -31,7 +31,7 @@ impl ComponentRoot {
         self.components.iter_mut().collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn components(&self) -> Vec<&TextComponent> {
         self.components
             .iter()
@@ -52,12 +52,12 @@ impl ComponentRoot {
             .collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn file_name(&self) -> Option<&str> {
         self.file_name.as_deref()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn words(&self) -> Vec<&Word> {
         self.components
             .iter()
@@ -82,7 +82,7 @@ impl ComponentRoot {
         find_and_mark(search, &mut words);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn search_results_heights(&self) -> Vec<usize> {
         self.components
             .iter()
@@ -169,7 +169,10 @@ impl ComponentRoot {
     }
 
     #[must_use]
-    #[expect(clippy::cast_possible_truncation, reason = "row index bounded by terminal height")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "row index bounded by terminal height"
+    )]
     pub fn link_index_and_height(&self) -> Vec<(usize, u16)> {
         let mut indexes = Vec::new();
         let mut count = 0;
@@ -228,7 +231,7 @@ impl ComponentRoot {
     }
 
     /// Return the content of the components, where each element a line
-    #[must_use] 
+    #[must_use]
     pub fn content(&self) -> Vec<String> {
         self.components()
             .iter()
@@ -268,7 +271,7 @@ impl ComponentRoot {
             .filter(|c| c.kind() == WordType::Selected)
             .collect::<Vec<_>>();
 
-        selected.first().unwrap().previous_type()
+        selected.first().unwrap().previous_kind()
     }
 
     /// Transforms the content of the components to fit the given width
@@ -279,7 +282,7 @@ impl ComponentRoot {
     }
 
     /// Because of the parsing, every table has a missing newline at the end
-    #[must_use] 
+    #[must_use]
     pub fn add_missing_components(self) -> Self {
         let mut components = Vec::new();
         let mut iter = self.components.into_iter().peekable();
@@ -303,12 +306,12 @@ impl ComponentRoot {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn height(&self) -> u16 {
         self.components.iter().map(ComponentProps::height).sum()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn num_links(&self) -> usize {
         self.components
             .iter()

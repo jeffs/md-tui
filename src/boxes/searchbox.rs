@@ -15,7 +15,7 @@ pub struct SearchBox {
 }
 
 impl SearchBox {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             text: String::new(),
@@ -44,7 +44,7 @@ impl SearchBox {
         self.cursor = 0;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn dimensions(&self) -> (u16, u16) {
         (self.height, self.width)
     }
@@ -55,12 +55,12 @@ impl SearchBox {
         text
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content_str(&self) -> &str {
         &self.text
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content(&self) -> Option<&str> {
         if self.text.is_empty() {
             None
@@ -78,12 +78,12 @@ impl SearchBox {
         self.width = width;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn x(&self) -> u16 {
         self.x
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn y(&self) -> u16 {
         self.y
     }
