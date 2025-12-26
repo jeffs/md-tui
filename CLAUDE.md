@@ -80,3 +80,10 @@ Edit `src/md.pest` PEG grammar, then test with `cargo test` and real markdown fi
 - File watching via `notify` crate for live reload
 - Panic hook ensures terminal restoration on crash
 - Character boundary safety for non-ASCII text (Chinese, etc.)
+
+## Active Technologies
+- Rust 2024 edition (rustc 1.92.0) + ratatui 0.29.0, config 0.15.17, crossterm 0.29.0 (001-hide-help-bar)
+- Config file at `~/.config/mdt/config.toml` (existing pattern) (001-hide-help-bar)
+
+## Recent Changes
+- 001-hide-help-bar: Added Rust 2024 edition (rustc 1.92.0) + ratatui 0.29.0, config 0.15.17, crossterm 0.29.0
