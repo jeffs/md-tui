@@ -158,6 +158,7 @@ width = 100  # Set to 0 for full terminal width
 gitignore = false
 alignment = "left" # "center" | "right"
 help_box = true # Set to false to hide the "? - Help" hint at the bottom
+emoji_check_marks = true # Set to false to use text symbols like [✓] instead of ✅
 
 # Inline styling
 bold_color = "reset"
