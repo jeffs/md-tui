@@ -32,7 +32,7 @@
 
 **Purpose**: Add `help_bar` config field - required before UI changes.
 
-- [ ] T001 Add `help_bar: bool` field to `GeneralConfig` struct in src/util/general.rs
+- [x] T001 Add `help_bar: bool` field to `GeneralConfig` struct in src/util/general.rs
 
 **Checkpoint**: Configuration field available via `GENERAL_CONFIG.help_bar`
 
@@ -46,10 +46,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] Modify `render_file_tree()` to conditionally render Help bar based on `GENERAL_CONFIG.help_bar` in src/main.rs
-- [ ] T003 [US1] Modify `render_markdown()` to conditionally render Help bar based on `GENERAL_CONFIG.help_bar` in src/main.rs
-- [ ] T004 [US1] Adjust content area height calculation in `render_markdown()` when Help bar hidden in src/main.rs
-- [ ] T005 [US1] Adjust content area height calculation in `render_file_tree()` when Help bar hidden in src/main.rs
+- [x] T002 [US1] Modify `render_file_tree()` to conditionally render Help bar based on `GENERAL_CONFIG.help_bar` in src/main.rs
+- [x] T003 [US1] Modify `render_markdown()` to conditionally render Help bar based on `GENERAL_CONFIG.help_bar` in src/main.rs
+- [x] T004 [US1] Adjust content area height calculation in `render_markdown()` when Help bar hidden in src/main.rs
+- [x] T005 [US1] Adjust content area height calculation in `render_file_tree()` when Help bar hidden in src/main.rs
 
 **Checkpoint**: Config file `help_bar = false` hides Help bar hint. `?` key still shows expanded help.
 
@@ -65,8 +65,8 @@
 
 *(No additional code changes needed - handled automatically by existing `config` crate infrastructure)*
 
-- [ ] T006 [US2] Verify environment variable override works with `MDT_HELP_BAR=false` (manual test)
-- [ ] T007 [US2] Verify precedence: env var overrides config file setting (manual test)
+- [x] T006 [US2] Verify environment variable override works with `MDT_HELP_BAR=false` (manual test)
+- [x] T007 [US2] Verify precedence: env var overrides config file setting (manual test)
 
 **Checkpoint**: Environment variable `MDT_HELP_BAR=false` hides Help bar, takes precedence over config file.
 
@@ -76,10 +76,10 @@
 
 **Purpose**: Update documentation and verify edge cases.
 
-- [ ] T008 Update README.md with `help_bar` configuration option
-- [ ] T009 Run quickstart.md validation scenarios
-- [ ] T010 Verify edge case: invalid config value defaults to showing Help bar
-- [ ] T011 Verify edge case: Help bar behavior consistent in small terminals
+- [x] T008 Update README.md with `help_bar` configuration option
+- [x] T009 Run quickstart.md validation scenarios
+- [x] T010 Verify edge case: invalid config value defaults to showing Help bar
+- [x] T011 Verify edge case: Help bar behavior consistent in small terminals
 
 ---
 
