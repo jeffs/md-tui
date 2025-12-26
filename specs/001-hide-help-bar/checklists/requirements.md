@@ -32,6 +32,7 @@
 ## Notes
 
 - All items pass validation. Specification is ready for `/speckit.clarify` or `/speckit.plan`.
-- The specification covers three configuration methods (config file, environment variable, CLI flag) with clear precedence rules.
+- The specification covers two configuration methods (config file and environment variable) following the existing config system pattern.
+- Environment variable support comes automatically via the existing `config` crate integration.
 - Assumptions document reasonable defaults for configuration naming conventions.
 - Out of scope section explicitly excludes runtime toggling per user request.
