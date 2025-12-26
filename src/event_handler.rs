@@ -28,9 +28,6 @@ pub fn handle_keyboard_input(
     height: u16,
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
-    if key.code == KeyCode::Char('q') && app.boxes != Boxes::Search {
-        return KeyBoardAction::Exit;
-    }
     match app.mode {
         Mode::FileTree => keyboard_mode_file_tree(key, app, markdown, file_tree, height, watcher),
         Mode::View => keyboard_mode_view(key, app, markdown, height, watcher),
@@ -95,32 +92,37 @@ pub fn keyboard_mode_file_tree(
             }
             _ => {}
         },
-        Boxes::None => match key_to_action(&key) {
-            Action::Down => {
-                file_tree.next(height);
+        Boxes::None => {
+            // In FileTree mode, q exits the application
+            if key.code == KeyCode::Char('q') {
+                return KeyBoardAction::Exit;
             }
+            match key_to_action(&key) {
+                Action::Down => {
+                    file_tree.next(height);
+                }
 
-            Action::Up => {
-                file_tree.previous(height);
-            }
+                Action::Up => {
+                    file_tree.previous(height);
+                }
 
-            Action::PageDown => {
-                file_tree.next_page(height);
-            }
+                Action::PageDown => {
+                    file_tree.next_page(height);
+                }
 
-            Action::PageUp => {
-                file_tree.previous_page(height);
-            }
+                Action::PageUp => {
+                    file_tree.previous_page(height);
+                }
 
-            Action::ToTop => {
-                file_tree.first();
-            }
+                Action::ToTop => {
+                    file_tree.first();
+                }
 
-            Action::ToBottom => {
-                file_tree.last(height);
-            }
+                Action::ToBottom => {
+                    file_tree.last(height);
+                }
 
-            Action::Enter => {
+                Action::Enter => {
                 let Some(file) = file_tree.selected() else {
                     app.error_box.set_message("No file selected".to_string());
                     app.boxes = Boxes::Error;
@@ -190,7 +192,8 @@ pub fn keyboard_mode_file_tree(
                 file_tree.sort_name();
             }
             _ => {}
-        },
+            }
+        }
         Boxes::LinkPreview => {
             if key.code == KeyCode::Esc {
                 app.boxes = Boxes::None;
@@ -264,24 +267,35 @@ fn keyboard_mode_view(
             }
             _ => {}
         },
-        Boxes::None => match key_to_action(&key) {
-            Action::Down => {
-                if app.selected {
-                    app.select_index = cmp::min(app.select_index + 1, markdown.num_links() - 1);
-                    app.vertical_scroll = if let Ok(scroll) = markdown.select(app.select_index) {
-                        app.selected = true;
-                        scroll.saturating_sub(height / 3)
-                    } else {
-                        app.vertical_scroll
-                    };
-                } else {
-                    app.vertical_scroll = cmp::min(
-                        app.vertical_scroll + 1,
-                        markdown.height().saturating_sub(height / 2),
-                    );
+        Boxes::None => {
+            // In View mode, q returns to file tree
+            if key.code == KeyCode::Char('q') {
+                app.mode = Mode::FileTree;
+                app.help_box.set_mode(Mode::FileTree);
+                if let Some(file) = markdown.file_name() {
+                    app.history.push(Jump::File(file.to_string()));
                 }
+                app.reset();
+                return KeyBoardAction::Continue;
             }
-            Action::Up => {
+            match key_to_action(&key) {
+                Action::Down => {
+                    if app.selected {
+                        app.select_index = cmp::min(app.select_index + 1, markdown.num_links() - 1);
+                        app.vertical_scroll = if let Ok(scroll) = markdown.select(app.select_index) {
+                            app.selected = true;
+                            scroll.saturating_sub(height / 3)
+                        } else {
+                            app.vertical_scroll
+                        };
+                    } else {
+                        app.vertical_scroll = cmp::min(
+                            app.vertical_scroll + 1,
+                            markdown.height().saturating_sub(height / 2),
+                        );
+                    }
+                }
+                Action::Up => {
                 if app.selected {
                     app.select_index = app.select_index.saturating_sub(1);
                     app.vertical_scroll = if let Ok(scroll) = markdown.select(app.select_index) {
@@ -565,7 +579,8 @@ fn keyboard_mode_view(
                 app.help_box.toggle();
             }
             _ => {}
-        },
+            }
+        }
         Boxes::LinkPreview => {
             if key.code == KeyCode::Esc {
                 app.boxes = Boxes::None;
