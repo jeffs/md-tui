@@ -66,6 +66,7 @@ impl TextComponent {
     }
 
     /// # Panics
+    ///
     /// Panics if content height exceeds u16 (impossible since bounded by terminal height).
     #[must_use]
     pub fn new_formatted(kind: TextNode, content: Vec<Vec<Word>>) -> Self {

@@ -136,6 +136,7 @@ impl ComponentRoot {
     }
 
     /// # Panics
+    ///
     /// Panics if row index exceeds u16 (impossible since documents are bounded by terminal height).
     #[must_use]
     pub fn link_index_and_height(&self) -> Vec<(usize, u16)> {

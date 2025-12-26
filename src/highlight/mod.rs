@@ -90,6 +90,7 @@ pub enum HighlightInfo {
 }
 
 /// # Panics
+///
 /// Panics if syntax highlighting fails for a supported language.
 #[allow(unused_variables)]
 #[must_use]
