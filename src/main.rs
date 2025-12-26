@@ -318,7 +318,7 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
     let content_height = if GENERAL_CONFIG.help_bar || app.help_box.expanded() {
         size.height - 5
     } else {
-        size.height - 2
+        size.height
     };
 
     let area = Rect {
