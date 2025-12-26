@@ -25,17 +25,17 @@ A power user who frequently switches between different keyboard layouts or has m
 
 ### User Story 2 - Configure Control Key Modifiers (Priority: P2)
 
-A vim user who is accustomed to using `Ctrl+e` and `Ctrl+y` for scrolling wants to configure these familiar keybindings in mdt. They want to add control-modified keys alongside their existing single-character bindings.
+A vim user who is accustomed to using `C-e` and `C-y` for scrolling wants to configure these familiar keybindings in mdt. They want to add control-modified keys alongside their existing single-character bindings.
 
 **Why this priority**: Control key modifiers significantly expand the available keybinding space and enable vim-style navigation patterns that many terminal users expect.
 
-**Independent Test**: Can be fully tested by adding a control-modified key to the config (e.g., `down = ["j", "ctrl+e"]`), launching mdt, and verifying Ctrl+e triggers the scroll down action.
+**Independent Test**: Can be fully tested by adding a control-modified key to the config (e.g., `down = ["j", "C-e"]`), launching mdt, and verifying C-e triggers the scroll down action.
 
 **Acceptance Scenarios**:
 
-1. **Given** a config file with `down = ["j", "ctrl+e"]`, **When** the user presses `Ctrl+e` while viewing a markdown file, **Then** the view scrolls down one line.
-2. **Given** a config file with `up = ["k", "ctrl+y"]`, **When** the user presses `Ctrl+y` while viewing a markdown file, **Then** the view scrolls up one line.
-3. **Given** a config file with `page_down = "ctrl+d"`, **When** the user presses `Ctrl+d`, **Then** the view scrolls down one page.
+1. **Given** a config file with `down = ["j", "C-e"]`, **When** the user presses `C-e` while viewing a markdown file, **Then** the view scrolls down one line.
+2. **Given** a config file with `up = ["k", "C-y"]`, **When** the user presses `C-y` while viewing a markdown file, **Then** the view scrolls up one line.
+3. **Given** a config file with `page_down = "C-d"`, **When** the user presses `C-d`, **Then** the view scrolls down one page.
 
 ---
 
@@ -57,10 +57,10 @@ An existing mdt user who has a working config file with single-character keybind
 
 ### Edge Cases
 
-- What happens when an invalid modifier is specified (e.g., `"ctr+e"` typo)? The system should use the default binding for that action and continue operating.
+- What happens when an invalid modifier is specified (e.g., `"c+e"` or `"ctrl+e"` typo)? The system should use the default binding for that action and continue operating.
 - What happens when the same key is bound to multiple actions? The first matching action in evaluation order should be used (existing behavior preserved).
 - How is the space character represented in config? Both `" "` (space in quotes) and `"space"` (named key) should be accepted.
-- What happens with case sensitivity for modifiers? `"ctrl+e"`, `"Ctrl+E"`, and `"CTRL+e"` should all be treated equivalently.
+- What happens with case sensitivity for modifiers? `"C-e"`, `"c-E"`, and `"C-E"` should all be treated equivalently.
 - What happens when a control-modified key conflicts with terminal control sequences (e.g., Ctrl+c)? Reserved terminal sequences should take precedence; the config should not override them.
 
 ## Requirements *(mandatory)*
@@ -69,8 +69,8 @@ An existing mdt user who has a working config file with single-character keybind
 
 - **FR-001**: System MUST support binding multiple keys to a single action using array syntax (e.g., `action = ["key1", "key2"]`).
 - **FR-002**: System MUST support single-key string syntax for backwards compatibility (e.g., `action = "key"`).
-- **FR-003**: System MUST support control key modifiers using intuitive syntax: `ctrl+key`, `ctrl-key`, or `control+key`.
-- **FR-004**: System MUST treat modifier syntax as case-insensitive (e.g., `ctrl+e` equals `Ctrl+E`).
+- **FR-003**: System MUST support control key modifiers using `C-key` syntax (case-insensitive), consistent with Emacs and Helix conventions.
+- **FR-004**: System MUST treat modifier syntax as case-insensitive (e.g., `C-e` equals `c-E`).
 - **FR-005**: System MUST support the space key using either `" "` (literal space) or `"space"` (named).
 - **FR-006**: System MUST fall back to default bindings when an action has invalid or unparseable key specifications.
 - **FR-007**: System MUST preserve existing default keybindings when no config is specified.

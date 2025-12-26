@@ -10,13 +10,13 @@ Create or edit `~/.config/mdt/config.toml`:
 # Multiple keys for page down (d or space)
 page_down = ["d", " "]
 
-# Vim-style ctrl scrolling
-down = ["j", "ctrl+e"]
-up = ["k", "ctrl+y"]
+# Emacs/Helix-style ctrl scrolling
+down = ["j", "C-e"]
+up = ["k", "C-y"]
 
-# Half page with ctrl+d/ctrl+u
-half_page_down = ["l", "ctrl+d"]
-half_page_up = ["h", "ctrl+u"]
+# Half page with C-d/C-u
+half_page_down = ["l", "C-d"]
+half_page_up = ["h", "C-u"]
 ```
 
 ## Verification Steps
@@ -32,8 +32,8 @@ half_page_up = ["h", "ctrl+u"]
 
 1. Run `mdt README.md`
 2. Press `j` - view should scroll down one line
-3. Press `Ctrl+e` - view should scroll down one line (same behavior)
-4. Press `Ctrl+y` - view should scroll up one line
+3. Press `C-e` (Ctrl+e) - view should scroll down one line (same behavior)
+4. Press `C-y` (Ctrl+y) - view should scroll up one line
 5. **Expected**: Control-modified keys work alongside regular keys
 
 ### Test 3: Backwards Compatibility (P1)
@@ -52,7 +52,7 @@ half_page_up = ["h", "ctrl+u"]
 1. Create config mixing old and new syntax:
    ```toml
    up = "k"
-   page_down = ["d", "space", "ctrl+d"]
+   page_down = ["d", "space", "C-d"]
    ```
 2. Run `mdt README.md`
 3. Test all configured keys
@@ -62,7 +62,7 @@ half_page_up = ["h", "ctrl+u"]
 
 1. Create config with invalid binding:
    ```toml
-   up = "ctrl+invalid+key"
+   up = "C-invalid-key"
    ```
 2. Run `mdt README.md`
 3. Press `k`
@@ -84,7 +84,7 @@ rm ~/.config/mdt/config.toml
 
 **Issue**: Ctrl+key not responding
 - Check terminal captures the key (some terminals intercept Ctrl sequences)
-- Verify config syntax: `ctrl+e` not `ctr+e`
+- Verify config syntax: `C-e` not `c+e` or `ctrl+e`
 
 **Issue**: Space key not working
 - Use either `" "` (space in quotes) or `"space"` (named)
