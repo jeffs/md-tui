@@ -8,6 +8,7 @@ pub struct GeneralConfig {
     pub gitignore: bool,
     pub centering: Centering,
     pub help_box: bool,
+    pub emoji_symbols: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +37,7 @@ lazy_static! {
                 .get::<Centering>("alignment")
                 .unwrap_or(Centering::Left),
             help_box: settings.get::<bool>("help_box").unwrap_or(true),
+            emoji_symbols: settings.get::<bool>("emoji_symbols").unwrap_or(true),
         }
     };
 }
