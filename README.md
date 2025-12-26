@@ -48,6 +48,10 @@ Start the program running `mdt <file.md>` or just `mdt`. The latter will search
 recursively from where it was invoked for any markdown file and show it in a
 _file tree_.
 
+You can also pass a directory to search within: `mdt ./docs`. Multiple files
+and directories can be combined: `mdt README.md ./docs ./notes` - only those
+paths will appear in the file tree.
+
 You can also pipe the content into the program. Example: `cat README.md | mdt`.
 
 ## Key binds
