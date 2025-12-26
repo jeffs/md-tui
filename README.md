@@ -124,31 +124,52 @@ Some key actions are not configurable. Like the following:
 > If you override another default key, it's undefined behavior if that key does
 > not get reassigned.
 
-> Actions can only be assigned to single characters. Space, fn keys, ctrl+key,
-> backspace etc., will not take effect and the default will be in use.
+Each action can be bound to a single key or multiple keys using array syntax.
+Control key modifiers are supported with the `C-` prefix (case-insensitive).
 
 ```toml
-# Keyboard actions
-up = 'k'
-down = 'j'
-page_up = 'u'
-page_down = 'd'
-half_page_down = 'l'
-half_page_up = 'h'
-top = 'g'
-bottom = 'G'
-search = 'f'
-search_next = 'n'
-search_previous = 'N'
+# Keyboard actions - single key (backwards compatible)
+up = "k"
+down = "j"
+
+# Multiple keys for the same action
+page_down = ["d", " "]  # 'd' or space
+page_up = "u"
+
+# Control key modifiers (C- prefix, Emacs/Helix style)
+# Example: vim-style scrolling with C-e/C-y
+down = ["j", "C-e"]
+up = ["k", "C-y"]
+half_page_down = ["l", "C-d"]
+half_page_up = ["h", "C-u"]
+
+# Named keys: "space", "tab", "enter", "esc", "backspace"
+page_down = ["d", "space"]
+```
+
+Default keybindings:
+
+```toml
+up = "k"
+down = "j"
+page_up = "u"
+page_down = "d"
+half_page_down = "l"
+half_page_up = "h"
+top = "g"
+bottom = "G"
+search = "f"
+search_next = "n"
+search_previous = "N"
 # This will search downwards until it finds one or select the last link in document.
-select_link = 's'
+select_link = "s"
 # Finds the link 2/3 up the page. It will search then for closest in both direction.
-select_link_alt = 'S'
-edit = 'e'
-hover = 'K'
-back = 'b'
-file_tree = 't'
-sort = 'o'
+select_link_alt = "S"
+edit = "e"
+hover = "K"
+back = "b"
+file_tree = "t"
+sort = "o"
 ```
 
 ### Colors and misc

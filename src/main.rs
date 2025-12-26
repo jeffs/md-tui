@@ -222,7 +222,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
         if event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
                 match handle_keyboard_input(
-                    key.code,
+                    key,
                     &mut app,
                     &mut markdown,
                     &mut file_tree,
