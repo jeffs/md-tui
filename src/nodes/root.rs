@@ -93,7 +93,7 @@ impl ComponentRoot {
             .flat_map(|c| {
                 let mut heights = c.selected_heights();
                 for h in &mut heights {
-                    *h += c.y_offset() as usize;
+                    *h += usize::from(c.y_offset());
                 }
                 heights
             })
@@ -135,11 +135,9 @@ impl ComponentRoot {
         }
     }
 
+    /// # Panics
+    /// Panics if row index exceeds u16 (impossible since documents are bounded by terminal height).
     #[must_use]
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "row index bounded by terminal height"
-    )]
     pub fn link_index_and_height(&self) -> Vec<(usize, u16)> {
         let mut indexes = Vec::new();
         let mut count = 0;
@@ -151,7 +149,9 @@ impl ComponentRoot {
             for (index, row) in comp.content().iter().enumerate() {
                 for c in row {
                     if c.kind() == WordType::Link || c.kind() == WordType::Selected {
-                        indexes.push((count, height + index as u16));
+                        let index_u16: u16 =
+                            index.try_into().expect("row index fits in terminal height");
+                        indexes.push((count, height + index_u16));
                         count += 1;
                     }
                 }

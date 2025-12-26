@@ -202,10 +202,8 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "page index divided by partition fits in u32 for any realistic file count"
-    )]
+    /// # Panics
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn next(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -217,14 +215,14 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / partition(height)) as u32;
+        self.page = (i / partition(height))
+            .try_into()
+            .expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "page index divided by partition fits in u32 for any realistic file count"
-    )]
+    /// # Panics
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn previous(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -236,14 +234,14 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / partition(height)) as u32;
+        self.page = (i / partition(height))
+            .try_into()
+            .expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "page index divided by partition fits in u32 for any realistic file count"
-    )]
+    /// # Panics
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn next_page(&mut self, height: u16) {
         let partition = partition(height);
         let i = match self.list_state.selected() {
@@ -256,14 +254,12 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / partition) as u32;
+        self.page = (i / partition).try_into().expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "page index divided by partition fits in u32 for any realistic file count"
-    )]
+    /// # Panics
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn previous_page(&mut self, height: u16) {
         let partition = partition(height);
         let i = match self.list_state.selected() {
@@ -276,7 +272,7 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / partition) as u32;
+        self.page = (i / partition).try_into().expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
@@ -285,15 +281,13 @@ impl FileTree {
         self.page = 0;
     }
 
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "page index divided by partition fits in u32 for any realistic file count"
-    )]
+    /// # Panics
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn last(&mut self, height: u16) {
         let partition = partition(height);
         let i = self.files.len() - 2;
         self.list_state.select(Some(i));
-        self.page = (i / partition) as u32;
+        self.page = (i / partition).try_into().expect("page count fits in u32");
     }
 
     pub fn unselect(&mut self) {
@@ -356,7 +350,7 @@ impl FileTree {
 }
 
 fn partition(height: u16) -> usize {
-    let partition_size = usize::midpoint(height as usize, 2);
+    let partition_size = usize::midpoint(usize::from(height), 2);
 
     if partition_size.is_multiple_of(2) {
         partition_size
@@ -366,16 +360,13 @@ fn partition(height: u16) -> usize {
 }
 
 impl Widget for FileTree {
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "y position bounded by terminal height"
-    )]
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut state = self.state().to_owned();
         let file_len = self.files.len();
         let part_size = partition(area.height);
 
-        let items = if let Some(iter) = self.files.chunks(part_size).nth(self.page as usize) {
+        let page_index: usize = self.page.try_into().expect("page index fits in usize");
+        let items = if let Some(iter) = self.files.chunks(part_size).nth(page_index) {
             iter.to_owned()
         } else {
             self.files
@@ -412,8 +403,9 @@ impl Widget for FileTree {
 
         StatefulWidget::render(items, area, buf, &mut state);
 
+        let y_offset: u16 = y_height.try_into().expect("y position fits in terminal height");
         let area = Rect {
-            y: area.y + y_height as u16 + 2,
+            y: area.y + y_offset + 2,
             ..area
         };
 

@@ -79,10 +79,6 @@ fn is_url(url: &str) -> bool {
     clippy::too_many_lines,
     reason = "match must handle all Rule variants in one place for exhaustiveness checking"
 )]
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "heading level is bounded by markdown spec (1-6)"
-)]
 fn parse_component(parse_node: ParseNode) -> Component {
     match parse_node.kind() {
         MdParseEnum::Image => {
@@ -206,9 +202,12 @@ fn parse_component(parse_node: ParseNode) -> Component {
             let leaf_nodes = get_leaf_nodes(parse_node);
             let mut words = Vec::new();
 
+            let indent_u8: u8 = indent
+                .try_into()
+                .expect("heading level bounded by markdown spec (1-6)");
             words.push(Word::new(
                 String::new(),
-                WordType::MetaInfo(MetaData::HeadingLevel(indent as u8)),
+                WordType::MetaInfo(MetaData::HeadingLevel(indent_u8)),
             ));
 
             if indent > 1 {
