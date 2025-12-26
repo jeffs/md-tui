@@ -155,21 +155,21 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
     let mut content = component.content_owned();
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
@@ -260,21 +260,21 @@ fn render_paragraph(area: Rect, buf: &mut Buffer, component: TextComponent, clip
     let mut content = component.content_owned();
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
@@ -297,21 +297,21 @@ fn render_list(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cli
     let mut content = component.content_owned();
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
@@ -337,18 +337,17 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: &TextComponent, cl
     match clip {
         Clipping::Both => {
             let top = component.scroll_offset() - component.y_offset();
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
-            // panic!("offset: {}, height: {}, len: {}", offset, height, len);
+            let offset = len - usize::from(height);
             content.drain(0..offset);
         }
         Clipping::Lower => {
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
         }
         Clipping::None => (),
     }
@@ -371,10 +370,6 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: &TextComponent, cl
 #[expect(
     clippy::too_many_lines,
     reason = "table cell iteration coordinates row/column state that would be awkward to pass between functions"
-)]
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "word lengths bounded by terminal width"
 )]
 fn render_table(
     area: Rect,
@@ -406,9 +401,13 @@ fn render_table(
             .map(|(column_i, entry)| {
                 let mut line = vec![];
                 let mut lines = vec![];
-                let mut line_len = 0;
+                let mut line_len: u16 = 0;
                 for word in entry {
-                    let word_len = word.content().len() as u16;
+                    let word_len: u16 = word
+                        .content()
+                        .len()
+                        .try_into()
+                        .expect("word length fits in u16");
                     line_len += word_len;
                     if line_len <= widths[column_i] {
                         line.push(word);
@@ -444,17 +443,16 @@ fn render_table(
         Clipping::None => (0, height),
     };
 
-    let (start_i, stop_i) = (
-        start_i as usize,
-        (stop_i).saturating_sub(heights[0]) as usize,
-    );
+    let start_i = usize::from(start_i);
+    let stop_i = usize::from(stop_i.saturating_sub(heights[0]));
     let mut line_i = 0;
     let rows = moved_content
         .iter()
         .enumerate()
         .filter_map(|(row_i, c)| {
-            if (line_i + heights[row_i + 1] as usize) <= start_i {
-                line_i += heights[row_i + 1] as usize;
+            let row_height = usize::from(heights[row_i + 1]);
+            if (line_i + row_height) <= start_i {
+                line_i += row_height;
                 return None;
             } else if stop_i <= line_i {
                 return None;
@@ -462,11 +460,11 @@ fn render_table(
 
             let start_cell_line_i = start_i.saturating_sub(line_i);
             let stop_cell_line_i = stop_i.saturating_sub(line_i);
-            let n_cell_lines = (heights[row_i + 1] as usize)
+            let n_cell_lines = row_height
                 .min(stop_cell_line_i)
                 .saturating_sub(start_cell_line_i);
 
-            line_i += heights[row_i + 1] as usize;
+            line_i += row_height;
 
             Some(
                 Row::new(
@@ -475,9 +473,13 @@ fn render_table(
                         .map(|(column_i, entry)| {
                             let mut acc = vec![];
                             let mut lines = vec![];
-                            let mut line_len = 0;
+                            let mut line_len: u16 = 0;
                             for word in entry {
-                                let word_len = word.content().len() as u16;
+                                let word_len: u16 = word
+                                    .content()
+                                    .len()
+                                    .try_into()
+                                    .expect("word length fits in u16");
                                 line_len += word_len;
                                 if line_len <= widths[column_i] {
                                     acc.push(word);
@@ -511,7 +513,7 @@ fn render_table(
                         })
                         .collect::<Vec<_>>(),
                 )
-                .height(n_cell_lines as u16),
+                .height(n_cell_lines.try_into().expect("cell line count fits in u16")),
             )
         })
         .collect::<Vec<_>>();
@@ -567,21 +569,21 @@ fn render_task(
 
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,

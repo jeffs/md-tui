@@ -14,11 +14,9 @@ pub struct ImageComponent {
 }
 
 impl ImageComponent {
+    /// # Panics
+    /// Panics if image height conversion fails (impossible since height is capped at 20).
     #[must_use]
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "image height capped at 20 rows"
-    )]
     pub fn new(image: DynamicImage, height: u32, alt_text: &str) -> Option<Self> {
         let picker = Picker::from_query_stdio().ok()?;
 
@@ -26,7 +24,9 @@ impl ImageComponent {
 
         let (_, f_height) = picker.font_size();
 
-        let height = cmp::min(height / u32::from(f_height), 20) as u16;
+        let height: u16 = cmp::min(height / u32::from(f_height), 20)
+            .try_into()
+            .expect("image height capped at 20 rows");
 
         Some(Self {
             height,
