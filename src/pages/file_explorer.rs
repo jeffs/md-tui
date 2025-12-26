@@ -213,7 +213,7 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / self.partition(height)) as u32;
+        self.page = (i / Self::partition(height)) as u32;
         self.list_state.select(Some(i));
     }
 
@@ -229,13 +229,13 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / self.partition(height)) as u32;
+        self.page = (i / Self::partition(height)) as u32;
         self.list_state.select(Some(i));
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn next_page(&mut self, height: u16) {
-        let partition = self.partition(height);
+        let partition = Self::partition(height);
         let i = match self.list_state.selected() {
             Some(i) => {
                 if i + partition >= self.files.len() {
@@ -252,7 +252,7 @@ impl FileTree {
 
     #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn previous_page(&mut self, height: u16) {
-        let partition = self.partition(height);
+        let partition = Self::partition(height);
         let i = match self.list_state.selected() {
             Some(i) => {
                 if i < partition {
@@ -274,7 +274,7 @@ impl FileTree {
 
     #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn last(&mut self, height: u16) {
-        let partition = self.partition(height);
+        let partition = Self::partition(height);
         let i = self.files.len() - 2;
         self.list_state.select(Some(i));
         self.page = (i / partition) as u32;
@@ -317,8 +317,7 @@ impl FileTree {
         &self.all_files
     }
 
-    #[expect(clippy::unused_self, reason = "method for future extensibility")]
-    fn partition(&self, height: u16) -> usize {
+    fn partition(height: u16) -> usize {
         let partition_size = usize::midpoint(height as usize, 2);
 
         if partition_size.is_multiple_of(2) {
@@ -336,7 +335,7 @@ impl FileTree {
     #[must_use] 
     pub fn height(&self, height: u16) -> usize {
         cmp::min(
-            self.partition(height) / 2 * 3,
+            Self::partition(height) / 2 * 3,
             self.files
                 .iter()
                 .filter(|f| matches!(f, MdFileComponent::File(_)))
@@ -355,11 +354,11 @@ impl Widget for FileTree {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut state = self.state().to_owned();
         let file_len = self.files.len();
-        let partition = self.partition(area.height);
+        let partition = Self::partition(area.height);
 
         let items = if let Some(iter) = self
             .files
-            .chunks(self.partition(area.height))
+            .chunks(Self::partition(area.height))
             .nth(self.page as usize)
         {
             iter.to_owned()
