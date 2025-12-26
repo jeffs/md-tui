@@ -157,6 +157,7 @@ colors, set it to `reset`.
 width = 100
 gitignore = false
 alignment = "left" # "center" | "right"
+help_box = true # Set to false to hide the "? - Help" hint at the bottom
 
 # Inline styling
 bold_color = "reset"
