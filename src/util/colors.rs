@@ -43,6 +43,7 @@ pub struct ColorConfig {
 }
 
 /// # Panics
+///
 /// Panics if home directory cannot be determined.
 #[must_use]
 #[expect(
@@ -184,6 +185,7 @@ static COLOR_CONFIG_INTERNAL: LazyLock<Arc<RwLock<ColorConfig>>> =
     LazyLock::new(|| Arc::new(RwLock::new(read_color_config_from_file())));
 
 /// # Panics
+///
 /// Panics if the lock is poisoned.
 pub fn set_color_config(config: ColorConfig) {
     let mut color_config_internal = COLOR_CONFIG_INTERNAL.write().unwrap();
@@ -191,6 +193,7 @@ pub fn set_color_config(config: ColorConfig) {
 }
 
 /// # Panics
+///
 /// Panics if the lock is poisoned.
 #[must_use]
 pub fn color_config() -> ColorConfig {
@@ -207,6 +210,7 @@ pub struct HeadingColors {
 }
 
 /// # Panics
+///
 /// Panics if home directory cannot be determined.
 #[must_use]
 pub fn read_heading_colors_from_file() -> HeadingColors {
@@ -245,6 +249,7 @@ static HEADING_COLORS_INTERNAL: LazyLock<Arc<RwLock<HeadingColors>>> =
     LazyLock::new(|| Arc::new(RwLock::new(read_heading_colors_from_file())));
 
 /// # Panics
+///
 /// Panics if the lock is poisoned.
 pub fn set_heading_colors(config: HeadingColors) {
     let mut heading_colors_internal = HEADING_COLORS_INTERNAL.write().unwrap();
@@ -252,6 +257,7 @@ pub fn set_heading_colors(config: HeadingColors) {
 }
 
 /// # Panics
+///
 /// Panics if the lock is poisoned.
 #[must_use]
 pub fn heading_colors() -> HeadingColors {

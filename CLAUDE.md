@@ -73,6 +73,25 @@ Environment variables: `MDT_` prefix (e.g., `MDT_WIDTH=120`)
 
 Edit `src/md.pest` PEG grammar, then test with `cargo test` and real markdown files.
 
+## Code Style
+
+### Rustdoc Headers
+
+In rustdoc Markdown, any header (such as `# Panics`) must be followed by a blank `///` line:
+
+```rust
+/// # Panics
+///
+/// Panics if the lock is poisoned.
+```
+
+Not:
+
+```rust
+/// # Panics
+/// Panics if the lock is poisoned.
+```
+
 ## Notes
 
 - All components use ratatui's `Widget` trait

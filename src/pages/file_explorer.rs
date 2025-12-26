@@ -203,6 +203,7 @@ impl FileTree {
     }
 
     /// # Panics
+    ///
     /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn next(&mut self, height: u16) {
         let i = match self.list_state.selected() {
@@ -222,6 +223,7 @@ impl FileTree {
     }
 
     /// # Panics
+    ///
     /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn previous(&mut self, height: u16) {
         let i = match self.list_state.selected() {
@@ -241,6 +243,7 @@ impl FileTree {
     }
 
     /// # Panics
+    ///
     /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn next_page(&mut self, height: u16) {
         let partition = partition(height);
@@ -259,6 +262,7 @@ impl FileTree {
     }
 
     /// # Panics
+    ///
     /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn previous_page(&mut self, height: u16) {
         let partition = partition(height);
@@ -282,6 +286,7 @@ impl FileTree {
     }
 
     /// # Panics
+    ///
     /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn last(&mut self, height: u16) {
         let partition = partition(height);

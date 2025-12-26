@@ -19,6 +19,7 @@ use crate::nodes::{
 pub struct MdParser;
 
 /// # Panics
+///
 /// Panics if the parsed markdown text has no root element.
 #[must_use]
 pub fn parse_markdown(name: Option<&str>, content: &str, width: u16) -> ComponentRoot {

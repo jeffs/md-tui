@@ -15,6 +15,7 @@ pub struct ImageComponent {
 
 impl ImageComponent {
     /// # Panics
+    ///
     /// Panics if image height conversion fails (impossible since height is capped at 20).
     #[must_use]
     pub fn new(image: DynamicImage, height: u32, alt_text: &str) -> Option<Self> {

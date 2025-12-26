@@ -38,6 +38,7 @@ pub fn handle_keyboard_input(
 }
 
 /// # Panics
+///
 /// Panics if file tree height exceeds u16 (impossible in practice since terminals are smaller).
 #[expect(
     clippy::too_many_lines,

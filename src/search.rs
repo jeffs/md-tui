@@ -22,6 +22,7 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
 }
 
 /// # Panics
+///
 /// Panics if the channel receiver is disconnected.
 #[expect(
     clippy::needless_pass_by_value,

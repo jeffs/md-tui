@@ -98,6 +98,7 @@ impl<'a> From<&'a str> for LinkType<'a> {
 }
 
 /// # Panics
+///
 /// Panics if terminal restoration fails.
 pub fn destruct_terminal() {
     disable_raw_mode().unwrap();
