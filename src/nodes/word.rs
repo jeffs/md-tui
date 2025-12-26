@@ -91,7 +91,7 @@ impl From<MdParseEnum> for WordType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(clippy::struct_field_names, reason = "word_type clearly describes the field's purpose")]
+#[expect(clippy::struct_field_names, reason = "renaming to `kind` would conflict with the kind() method")]
 pub struct Word {
     content: String,
     word_type: WordType,

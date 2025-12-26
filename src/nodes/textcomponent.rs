@@ -477,7 +477,7 @@ fn transform_codeblock(component: &mut TextComponent) {
     component.height = height;
 }
 
-#[expect(clippy::too_many_lines, reason = "list transformation is complex but cohesive")]
+#[expect(clippy::too_many_lines, reason = "splitting would require passing many intermediate state values between functions")]
 #[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
 fn transform_list(component: &mut TextComponent, width: u16) {
     let mut len = 0;

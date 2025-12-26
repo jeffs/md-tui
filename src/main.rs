@@ -58,7 +58,7 @@ fn main() {
 
 #[expect(
     clippy::too_many_lines,
-    reason = "main event loop is complex but cohesive"
+    reason = "event loop must coordinate terminal, file watcher, and UI state in one place"
 )]
 fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();

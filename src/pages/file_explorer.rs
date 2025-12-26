@@ -201,7 +201,7 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
+    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
     pub fn next(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -217,7 +217,7 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
+    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
     pub fn previous(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -233,7 +233,7 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
+    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
     pub fn next_page(&mut self, height: u16) {
         let partition = Self::partition(height);
         let i = match self.list_state.selected() {
@@ -250,7 +250,7 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
+    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
     pub fn previous_page(&mut self, height: u16) {
         let partition = Self::partition(height);
         let i = match self.list_state.selected() {
@@ -272,7 +272,7 @@ impl FileTree {
         self.page = 0;
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
+    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
     pub fn last(&mut self, height: u16) {
         let partition = Self::partition(height);
         let i = self.files.len() - 2;
