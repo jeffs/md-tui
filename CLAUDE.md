@@ -84,6 +84,8 @@ Edit `src/md.pest` PEG grammar, then test with `cargo test` and real markdown fi
 ## Active Technologies
 - Rust 2024 edition (rustc 1.92.0) + ratatui 0.29.0, config 0.15.17, crossterm 0.29.0 (001-hide-help-bar)
 - Config file at `~/.config/mdt/config.toml` (existing pattern) (001-hide-help-bar)
+- Rust 2024 edition + crossterm 0.29.0 (KeyEvent, KeyModifiers), config 0.15.17 (TOML parsing), lazy_static (005-enhanced-keybindings)
+- TOML config file (~/.config/mdt/config.toml) (005-enhanced-keybindings)
 
 ## Recent Changes
 - 001-hide-help-bar: Added Rust 2024 edition (rustc 1.92.0) + ratatui 0.29.0, config 0.15.17, crossterm 0.29.0
