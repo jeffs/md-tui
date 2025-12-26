@@ -40,7 +40,7 @@ A user wants to temporarily hide the Help bar for a specific session or set it s
 
 ### Edge Cases
 
-- What happens when an invalid value is provided for `help_bar` in config (e.g., a string instead of boolean)? The system should use the default (show Help bar) and optionally warn.
+- What happens when an invalid value is provided for `help_bar` in config (e.g., a string instead of boolean)? The system should use the default (show Help bar), consistent with how other config options handle invalid values.
 - What happens when the terminal height is very small (< 10 lines)? The Help bar behavior should be consistent with the user's preference regardless of terminal size.
 
 ## Requirements *(mandatory)*
