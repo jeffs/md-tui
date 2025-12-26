@@ -108,9 +108,7 @@ pub fn keyboard_mode_file_tree(
             }
 
             Action::Enter => {
-                let file = if let Some(file) = file_tree.selected() {
-                    file
-                } else {
+                let Some(file) = file_tree.selected() else {
                     app.error_box.set_message("No file selected".to_string());
                     app.boxes = Boxes::Error;
                     return KeyBoardAction::Continue;
@@ -329,9 +327,9 @@ fn keyboard_mode_view(
                     return KeyBoardAction::Continue;
                 }
 
-                let next = links.iter().min_by_key(|(_, row)| {
-                    (*row).abs_diff(app.vertical_scroll + height / 3)
-                });
+                let next = links
+                    .iter()
+                    .min_by_key(|(_, row)| (*row).abs_diff(app.vertical_scroll + height / 3));
 
                 if let Some((index, _)) = next {
                     app.vertical_scroll = if let Ok(scroll) = markdown.select(*index) {
