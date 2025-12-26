@@ -367,8 +367,14 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: &TextComponent, cl
     paragraph.render(area, buf);
 }
 
-#[expect(clippy::too_many_lines, reason = "table cell iteration coordinates row/column state that would be awkward to pass between functions")]
-#[expect(clippy::cast_possible_truncation, reason = "word lengths bounded by terminal width")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "table cell iteration coordinates row/column state that would be awkward to pass between functions"
+)]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "word lengths bounded by terminal width"
+)]
 fn render_table(
     area: Rect,
     buf: &mut Buffer,

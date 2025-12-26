@@ -6,7 +6,11 @@ use ratatui::{
     widgets::{Row, Table, Widget},
 };
 
-use crate::util::{Mode, colors::color_config, keys::{KEY_CONFIG, format_bindings}};
+use crate::util::{
+    Mode,
+    colors::color_config,
+    keys::{KEY_CONFIG, format_bindings},
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct HelpBox {
@@ -27,7 +31,7 @@ impl HelpBox {
         self.mode = mode;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn expanded(&self) -> bool {
         self.expanded
     }

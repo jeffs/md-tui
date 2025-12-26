@@ -75,8 +75,14 @@ fn is_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://")
 }
 
-#[expect(clippy::too_many_lines, reason = "match must handle all Rule variants in one place for exhaustiveness checking")]
-#[expect(clippy::cast_possible_truncation, reason = "heading level is bounded by markdown spec (1-6)")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "match must handle all Rule variants in one place for exhaustiveness checking"
+)]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "heading level is bounded by markdown spec (1-6)"
+)]
 fn parse_component(parse_node: ParseNode) -> Component {
     match parse_node.kind() {
         MdParseEnum::Image => {
@@ -451,7 +457,7 @@ pub struct ParseRoot {
 }
 
 impl ParseRoot {
-    #[must_use] 
+    #[must_use]
     pub fn new(file_name: Option<String>, children: Vec<ParseNode>) -> Self {
         Self {
             file_name,
@@ -459,17 +465,17 @@ impl ParseRoot {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn children(&self) -> &Vec<ParseNode> {
         &self.children
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn children_owned(self) -> Vec<ParseNode> {
         self.children
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn file_name(&self) -> Option<String> {
         self.file_name.clone()
     }
@@ -483,7 +489,7 @@ pub struct ParseNode {
 }
 
 impl ParseNode {
-    #[must_use] 
+    #[must_use]
     pub fn new(kind: MdParseEnum, content: String) -> Self {
         Self {
             kind,
@@ -492,12 +498,12 @@ impl ParseNode {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn kind(&self) -> MdParseEnum {
         self.kind
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -506,12 +512,12 @@ impl ParseNode {
         self.children.extend(children);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn children(&self) -> &Vec<ParseNode> {
         &self.children
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn children_owned(self) -> Vec<ParseNode> {
         self.children
     }

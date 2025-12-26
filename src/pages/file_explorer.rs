@@ -28,22 +28,22 @@ pub struct MdFile {
 }
 
 impl MdFile {
-    #[must_use] 
+    #[must_use]
     pub fn new(path: String, name: String) -> Self {
         Self { path, name }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn path_str(&self) -> &str {
         &self.path
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn path(&self) -> &Path {
         Path::new(&self.path)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -54,7 +54,8 @@ impl From<MdFile> for ListItem<'_> {
         let mut text = Text::default();
         text.extend([
             val.name.clone().fg(color_config().file_tree_name_color),
-            val.path.clone()
+            val.path
+                .clone()
                 .italic()
                 .fg(color_config().file_tree_path_color),
         ]);
@@ -82,7 +83,7 @@ pub struct FileTree {
 }
 
 impl FileTree {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             all_files: Vec::new(),
@@ -94,12 +95,12 @@ impl FileTree {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn loaded(&self) -> bool {
         self.loaded
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn finish(self) -> Self {
         let mut this = self;
         this.loaded = true;
@@ -201,7 +202,10 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "page index divided by partition fits in u32 for any realistic file count"
+    )]
     pub fn next(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -217,7 +221,10 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "page index divided by partition fits in u32 for any realistic file count"
+    )]
     pub fn previous(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -233,7 +240,10 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "page index divided by partition fits in u32 for any realistic file count"
+    )]
     pub fn next_page(&mut self, height: u16) {
         let partition = partition(height);
         let i = match self.list_state.selected() {
@@ -250,7 +260,10 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "page index divided by partition fits in u32 for any realistic file count"
+    )]
     pub fn previous_page(&mut self, height: u16) {
         let partition = partition(height);
         let i = match self.list_state.selected() {
@@ -272,7 +285,10 @@ impl FileTree {
         self.page = 0;
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "page index divided by partition fits in u32 for any realistic file count")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "page index divided by partition fits in u32 for any realistic file count"
+    )]
     pub fn last(&mut self, height: u16) {
         let partition = partition(height);
         let i = self.files.len() - 2;
@@ -284,7 +300,7 @@ impl FileTree {
         self.list_state.select(None);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn selected(&self) -> Option<&MdFile> {
         match self.list_state.selected() {
             Some(i) => self.files.get(i).and_then(|f| match f {
@@ -301,7 +317,7 @@ impl FileTree {
         self.files.push(MdFileComponent::Spacer);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn files(&self) -> Vec<&MdFile> {
         self.files
             .iter()
@@ -312,7 +328,7 @@ impl FileTree {
             .collect::<Vec<&MdFile>>()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn all_files(&self) -> &Vec<MdFile> {
         &self.all_files
     }
@@ -322,7 +338,7 @@ impl FileTree {
         &self.list_state
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn height(&self, height: u16) -> usize {
         cmp::min(
             partition(height) / 2 * 3,
@@ -350,7 +366,10 @@ fn partition(height: u16) -> usize {
 }
 
 impl Widget for FileTree {
-    #[expect(clippy::cast_possible_truncation, reason = "y position bounded by terminal height")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "y position bounded by terminal height"
+    )]
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut state = self.state().to_owned();
         let file_len = self.files.len();

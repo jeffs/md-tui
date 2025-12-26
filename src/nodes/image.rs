@@ -15,7 +15,10 @@ pub struct ImageComponent {
 
 impl ImageComponent {
     #[must_use]
-    #[expect(clippy::cast_possible_truncation, reason = "image height capped at 20 rows")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "image height capped at 20 rows"
+    )]
     pub fn new(image: DynamicImage, height: u32, alt_text: &str) -> Option<Self> {
         let picker = Picker::from_query_stdio().ok()?;
 
@@ -42,17 +45,17 @@ impl ImageComponent {
         self.scroll_offset = offset;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn scroll_offset(&self) -> u16 {
         self.scroll_offset
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn y_offset(&self) -> u16 {
         self.y_offset
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn height(&self) -> u16 {
         self.height
     }

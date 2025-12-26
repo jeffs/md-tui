@@ -40,7 +40,7 @@ pub struct TextComponent {
 }
 
 impl TextComponent {
-    #[must_use] 
+    #[must_use]
     pub fn new(kind: TextNode, content: Vec<Word>) -> Self {
         let meta_info: Vec<Word> = content
             .iter()
@@ -48,7 +48,10 @@ impl TextComponent {
             .cloned()
             .collect();
 
-        let content = content.into_iter().filter(super::word::Word::is_renderable).collect();
+        let content = content
+            .into_iter()
+            .filter(super::word::Word::is_renderable)
+            .collect();
 
         Self {
             kind,
@@ -63,7 +66,10 @@ impl TextComponent {
     }
 
     #[must_use]
-    #[expect(clippy::cast_possible_truncation, reason = "content lines bounded by terminal height")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "content lines bounded by terminal height"
+    )]
     pub fn new_formatted(kind: TextNode, content: Vec<Vec<Word>>) -> Self {
         let meta_info: Vec<Word> = content
             .iter()
@@ -74,7 +80,11 @@ impl TextComponent {
 
         let content = content
             .into_iter()
-            .map(|c| c.into_iter().filter(super::word::Word::is_renderable).collect())
+            .map(|c| {
+                c.into_iter()
+                    .filter(super::word::Word::is_renderable)
+                    .collect()
+            })
             .collect::<Vec<Vec<Word>>>();
 
         Self {
@@ -89,17 +99,17 @@ impl TextComponent {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn kind(&self) -> TextNode {
         self.kind.clone()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content(&self) -> &Vec<Vec<Word>> {
         &self.content
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content_as_lines(&self) -> Vec<String> {
         if let TextNode::Table(widths, _) = self.kind() {
             let column_count = widths.len();
@@ -120,41 +130,48 @@ impl TextComponent {
         } else {
             self.content
                 .iter()
-                .map(|c| c.iter().map(super::word::Word::content).collect::<Vec<_>>().join(""))
+                .map(|c| {
+                    c.iter()
+                        .map(super::word::Word::content)
+                        .collect::<Vec<_>>()
+                        .join("")
+                })
                 .collect()
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content_as_bytes(&self) -> Vec<u8> {
-        if self.kind() == TextNode::CodeBlock { self.content_as_lines().join("").as_bytes().to_vec() } else {
+        if self.kind() == TextNode::CodeBlock {
+            self.content_as_lines().join("").as_bytes().to_vec()
+        } else {
             let strings = self.content_as_lines();
             let string = strings.join("\n");
             string.as_bytes().to_vec()
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content_owned(self) -> Vec<Vec<Word>> {
         self.content
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn meta_info(&self) -> &Vec<Word> {
         &self.meta_info
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn height(&self) -> u16 {
         self.height
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn y_offset(&self) -> u16 {
         self.offset
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn scroll_offset(&self) -> u16 {
         self.scroll_offset
     }
@@ -167,7 +184,7 @@ impl TextComponent {
         self.scroll_offset = offset;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_focused(&self) -> bool {
         self.focused
     }
@@ -238,7 +255,7 @@ impl TextComponent {
             .content())
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn num_links(&self) -> usize {
         self.meta_info
             .iter()
@@ -246,7 +263,7 @@ impl TextComponent {
             .count()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn selected_heights(&self) -> Vec<usize> {
         let mut heights = Vec::new();
 
@@ -379,7 +396,10 @@ fn word_wrapping<'a>(
     lines
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "line count bounded by terminal height"
+)]
 fn transform_paragraph(component: &mut TextComponent, width: u16) {
     let width = match component.kind {
         TextNode::Paragraph => width as usize - 1,
@@ -402,7 +422,10 @@ fn transform_paragraph(component: &mut TextComponent, width: u16) {
     component.content = lines;
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "line count bounded by terminal height"
+)]
 fn transform_codeblock(component: &mut TextComponent) {
     let language = if let Some(word) = component.meta_info().first() {
         word.content()
@@ -477,8 +500,14 @@ fn transform_codeblock(component: &mut TextComponent) {
     component.height = height;
 }
 
-#[expect(clippy::too_many_lines, reason = "splitting would require passing many intermediate state values between functions")]
-#[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "splitting would require passing many intermediate state values between functions"
+)]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "line count bounded by terminal height"
+)]
 fn transform_list(component: &mut TextComponent, width: u16) {
     let mut len = 0;
     let mut lines = Vec::new();
@@ -639,8 +668,14 @@ fn transform_list(component: &mut TextComponent, width: u16) {
     component.content = lines;
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "table dimensions bounded by terminal size")]
-#[expect(clippy::cast_sign_loss, reason = "table column widths are always positive")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "table dimensions bounded by terminal size"
+)]
+#[expect(
+    clippy::cast_sign_loss,
+    reason = "table column widths are always positive"
+)]
 fn transform_table(component: &mut TextComponent, width: u16) {
     let content = &mut component.content;
 
@@ -740,7 +775,8 @@ fn transform_table(component: &mut TextComponent, width: u16) {
     {
         // Ensure the longest cell gets the most amount of area
         let ratio = f32::from(**old_column_width) / f32::from(available_overflowing_width);
-        let mut balanced_column_width = (ratio * f32::from(available_balanced_width)).floor() as u16;
+        let mut balanced_column_width =
+            (ratio * f32::from(available_balanced_width)).floor() as u16;
 
         if balanced_column_width < overflowing_column_min_width {
             balanced_column_width = overflowing_column_min_width;
@@ -781,7 +817,7 @@ fn transform_table(component: &mut TextComponent, width: u16) {
     component.kind = TextNode::Table(widths_balanced, heights);
 }
 
-#[must_use] 
+#[must_use]
 pub fn content_entry_len(words: &[Word]) -> usize {
     words.iter().map(|word| word.content().len()).sum()
 }

@@ -107,7 +107,7 @@ impl Word {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -135,7 +135,7 @@ impl Word {
         self.previous_kind = None;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_renderable(&self) -> bool {
         !matches!(self.kind(), WordType::MetaInfo(_) | WordType::LinkData)
     }

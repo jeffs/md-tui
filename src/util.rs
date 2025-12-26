@@ -15,16 +15,14 @@ pub mod general;
 pub mod keybinds;
 pub mod keys;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Mode {
     View,
     #[default]
     FileTree,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Boxes {
     Error,
     Search,
@@ -32,7 +30,6 @@ pub enum Boxes {
     #[default]
     None,
 }
-
 
 impl From<JumpHistory> for Mode {
     fn from(jump_history: JumpHistory) -> Self {
@@ -45,7 +42,6 @@ impl From<JumpHistory> for Mode {
         }
     }
 }
-
 
 #[derive(Default, Clone)]
 pub struct App {
@@ -77,7 +73,7 @@ impl App {
         temp_width != self.width
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn width(&self) -> u16 {
         self.width
     }
@@ -115,7 +111,7 @@ pub struct JumpHistory {
 }
 
 impl JumpHistory {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             history: Vec::new(),

@@ -12,7 +12,7 @@ pub struct KeyBinding {
 
 impl KeyBinding {
     /// Create a new `KeyBinding` from a character (no modifiers)
-    #[must_use] 
+    #[must_use]
     pub fn from_char(c: char) -> Self {
         Self {
             key: KeyCode::Char(c),
@@ -21,7 +21,7 @@ impl KeyBinding {
     }
 
     /// Check if this binding matches a `KeyEvent`
-    #[must_use] 
+    #[must_use]
     pub fn matches(&self, event: &KeyEvent) -> bool {
         if self.key != event.code {
             return false;
@@ -54,10 +54,11 @@ impl fmt::Display for KeyBinding {
 }
 
 /// Format a Vec<KeyBinding> for display (shows first binding only for brevity)
-#[must_use] 
+#[must_use]
 pub fn format_bindings(bindings: &[KeyBinding]) -> String {
     bindings
-        .first().map_or_else(|| "?".to_string(), std::string::ToString::to_string)
+        .first()
+        .map_or_else(|| "?".to_string(), std::string::ToString::to_string)
 }
 
 /// Parse a key string like "k", "space", "C-e" into a `KeyBinding`
@@ -132,8 +133,10 @@ fn parse_bindings(value: &Value, default: char) -> Vec<KeyBinding> {
 
 /// Helper to get bindings from config with a default char
 fn get_bindings(settings: &Config, key: &str, default: char) -> Vec<KeyBinding> {
-    settings
-        .get::<Value>(key).map_or_else(|_| vec![KeyBinding::from_char(default)], |v| parse_bindings(&v, default))
+    settings.get::<Value>(key).map_or_else(
+        |_| vec![KeyBinding::from_char(default)],
+        |v| parse_bindings(&v, default),
+    )
 }
 
 pub enum Action {
@@ -188,7 +191,7 @@ fn matches_any(bindings: &[KeyBinding], event: &KeyEvent) -> bool {
     bindings.iter().any(|b| b.matches(event))
 }
 
-#[must_use] 
+#[must_use]
 pub fn key_to_action(event: &KeyEvent) -> Action {
     // Check for hardcoded keys first (arrow keys, etc.)
     match event.code {
