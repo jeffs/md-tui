@@ -126,6 +126,8 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
+    /// # Panics
+    /// Panics if file path cannot be converted to string.
     pub fn sort_name(&mut self) {
         // Separate files and spacers into two vectors
         let (mut files, mut spacers): (Vec<_>, Vec<_>) = self
@@ -199,6 +201,7 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
+    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn next(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -214,6 +217,7 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
+    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn previous(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -229,6 +233,7 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
+    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn next_page(&mut self, height: u16) {
         let partition = self.partition(height);
         let i = match self.list_state.selected() {
@@ -245,6 +250,7 @@ impl FileTree {
         self.list_state.select(Some(i));
     }
 
+    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn previous_page(&mut self, height: u16) {
         let partition = self.partition(height);
         let i = match self.list_state.selected() {
@@ -266,6 +272,7 @@ impl FileTree {
         self.page = 0;
     }
 
+    #[expect(clippy::cast_possible_truncation, reason = "page count bounded by file count")]
     pub fn last(&mut self, height: u16) {
         let partition = self.partition(height);
         let i = self.files.len() - 2;
@@ -310,6 +317,7 @@ impl FileTree {
         &self.all_files
     }
 
+    #[expect(clippy::unused_self, reason = "method for future extensibility")]
     fn partition(&self, height: u16) -> usize {
         let partition_size = usize::midpoint(height as usize, 2);
 
@@ -343,6 +351,7 @@ impl FileTree {
 }
 
 impl Widget for FileTree {
+    #[expect(clippy::cast_possible_truncation, reason = "y position bounded by terminal height")]
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut state = self.state().to_owned();
         let file_len = self.files.len();

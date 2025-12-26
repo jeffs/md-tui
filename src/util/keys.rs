@@ -1,8 +1,7 @@
-use std::fmt;
+use std::{fmt, sync::LazyLock};
 
 use config::{Config, Environment, File, Value, ValueKind};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use lazy_static::lazy_static;
 
 /// Represents a single key binding with optional modifiers
 #[derive(Debug, Clone, PartialEq)]
@@ -195,10 +194,8 @@ pub fn key_to_action(event: &KeyEvent) -> Action {
     match event.code {
         KeyCode::Up => return Action::Up,
         KeyCode::Down => return Action::Down,
-        KeyCode::PageUp => return Action::PageUp,
-        KeyCode::PageDown => return Action::PageDown,
-        KeyCode::Right => return Action::PageDown,
-        KeyCode::Left => return Action::PageUp,
+        KeyCode::PageUp | KeyCode::Left => return Action::PageUp,
+        KeyCode::PageDown | KeyCode::Right => return Action::PageDown,
         KeyCode::Enter => return Action::Enter,
         KeyCode::Esc => return Action::Escape,
         _ => {}
@@ -271,35 +268,33 @@ pub fn key_to_action(event: &KeyEvent) -> Action {
     Action::None
 }
 
-lazy_static! {
-    pub static ref KEY_CONFIG: KeyConfig = {
-        let config_dir = dirs::home_dir().unwrap();
-        let config_file = config_dir.join(".config").join("mdt").join("config.toml");
-        let settings = Config::builder()
-            .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
-            .add_source(Environment::with_prefix("MDT").separator("_"))
-            .build()
-            .unwrap();
+pub static KEY_CONFIG: LazyLock<KeyConfig> = LazyLock::new(|| {
+    let config_dir = dirs::home_dir().unwrap();
+    let config_file = config_dir.join(".config").join("mdt").join("config.toml");
+    let settings = Config::builder()
+        .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
+        .add_source(Environment::with_prefix("MDT").separator("_"))
+        .build()
+        .unwrap();
 
-        KeyConfig {
-            up: get_bindings(&settings, "up", 'k'),
-            down: get_bindings(&settings, "down", 'j'),
-            page_up: get_bindings(&settings, "page_up", 'u'),
-            page_down: get_bindings(&settings, "page_down", 'd'),
-            half_page_up: get_bindings(&settings, "half_page_up", 'h'),
-            half_page_down: get_bindings(&settings, "half_page_down", 'l'),
-            search: get_bindings(&settings, "search", 'f'),
-            select_link: get_bindings(&settings, "select_link", 's'),
-            select_link_alt: get_bindings(&settings, "select_link_alt", 'S'),
-            search_next: get_bindings(&settings, "search_next", 'n'),
-            search_previous: get_bindings(&settings, "search_previous", 'N'),
-            edit: get_bindings(&settings, "edit", 'e'),
-            hover: get_bindings(&settings, "hover", 'K'),
-            top: get_bindings(&settings, "top", 'g'),
-            bottom: get_bindings(&settings, "bottom", 'G'),
-            back: get_bindings(&settings, "back", 'b'),
-            file_tree: get_bindings(&settings, "file_tree", 't'),
-            sort: get_bindings(&settings, "sort", 'o'),
-        }
-    };
-}
+    KeyConfig {
+        up: get_bindings(&settings, "up", 'k'),
+        down: get_bindings(&settings, "down", 'j'),
+        page_up: get_bindings(&settings, "page_up", 'u'),
+        page_down: get_bindings(&settings, "page_down", 'd'),
+        half_page_up: get_bindings(&settings, "half_page_up", 'h'),
+        half_page_down: get_bindings(&settings, "half_page_down", 'l'),
+        search: get_bindings(&settings, "search", 'f'),
+        select_link: get_bindings(&settings, "select_link", 's'),
+        select_link_alt: get_bindings(&settings, "select_link_alt", 'S'),
+        search_next: get_bindings(&settings, "search_next", 'n'),
+        search_previous: get_bindings(&settings, "search_previous", 'N'),
+        edit: get_bindings(&settings, "edit", 'e'),
+        hover: get_bindings(&settings, "hover", 'K'),
+        top: get_bindings(&settings, "top", 'g'),
+        bottom: get_bindings(&settings, "bottom", 'G'),
+        back: get_bindings(&settings, "back", 'b'),
+        file_tree: get_bindings(&settings, "file_tree", 't'),
+        sort: get_bindings(&settings, "sort", 'o'),
+    }
+});

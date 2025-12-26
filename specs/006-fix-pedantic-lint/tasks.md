@@ -18,9 +18,9 @@
 
 **Purpose**: Establish baseline and prepare for lint fixes
 
-- [ ] T001 Run `cargo clippy -- -W clippy::pedantic 2>&1 | grep -c "^warning:"` to confirm baseline (expect 95)
-- [ ] T002 Run `cargo test` to confirm all tests pass before changes
-- [ ] T003 Review fix patterns in plan.md for reference
+- [x] T001 Run `cargo clippy -- -W clippy::pedantic 2>&1 | grep -c "^warning:"` to confirm baseline (expect 95)
+- [x] T002 Run `cargo test` to confirm all tests pass before changes
+- [x] T003 Review fix patterns in plan.md for reference
 
 **Checkpoint**: Baseline established - proceed with lint fixes
 
@@ -34,7 +34,7 @@
 
 ### src/pages/markdown_renderer.rs (21 warnings)
 
-- [ ] T004 [P] Fix all pedantic lints in src/pages/markdown_renderer.rs:
+- [x] T004 [P] Fix all pedantic lints in src/pages/markdown_renderer.rs:
   - Convert `needless_pass_by_value` to references
   - Add `#[expect(clippy::cast_possible_truncation)]` for UI casts
   - Convert `needless_for_each` to for loops
@@ -43,7 +43,7 @@
 
 ### src/nodes/textcomponent.rs (18 warnings)
 
-- [ ] T005 [P] Fix all pedantic lints in src/nodes/textcomponent.rs:
+- [x] T005 [P] Fix all pedantic lints in src/nodes/textcomponent.rs:
   - Add `#[expect(clippy::cast_possible_truncation)]` for height/width casts
   - Add `#[expect(clippy::cast_sign_loss)]` for float-to-int casts
   - Convert `needless_for_each` to for loops
@@ -52,14 +52,14 @@
 
 ### src/util/colors.rs (15 warnings)
 
-- [ ] T006 [P] Fix all pedantic lints in src/util/colors.rs:
+- [x] T006 [P] Fix all pedantic lints in src/util/colors.rs:
   - Migrate `lazy_static!` to `std::sync::LazyLock`
   - Add `# Panics` doc sections or `#[expect(clippy::missing_panics_doc)]`
   - Add `#[expect(clippy::too_many_lines)]` for read_color_config_from_file
 
 ### src/search.rs (9 warnings)
 
-- [ ] T007 [P] Fix all pedantic lints in src/search.rs:
+- [x] T007 [P] Fix all pedantic lints in src/search.rs:
   - Convert `needless_pass_by_value` (Vec<&str>) to &[&str]
   - Convert `manual_let_else` to let-else syntax
   - Convert `needless_for_each` to for loops
