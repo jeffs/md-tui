@@ -82,10 +82,10 @@ impl Widget for TextComponent {
 
         match kind {
             TextNode::Paragraph => render_paragraph(area, buf, self, clips),
-            TextNode::Heading => render_heading(area, buf, self),
+            TextNode::Heading => render_heading(area, buf, &self),
             TextNode::Task => render_task(area, buf, self, clips, &meta_info),
             TextNode::List => render_list(area, buf, self, clips),
-            TextNode::CodeBlock => render_code_block(area, buf, self, clips),
+            TextNode::CodeBlock => render_code_block(area, buf, &self, clips),
             TextNode::Table(widths, heights) => {
                 render_table(area, buf, self, clips, &widths, &heights);
             }
@@ -225,8 +225,7 @@ fn style_heading(word: &Word, indent: u8) -> Span<'_> {
     Span::styled(word.content(), Style::default().fg(color))
 }
 
-#[expect(clippy::needless_pass_by_value, reason = "component is consumed by content() method")]
-fn render_heading(area: Rect, buf: &mut Buffer, component: TextComponent) {
+fn render_heading(area: Rect, buf: &mut Buffer, component: &TextComponent) {
     let indent = if let Some(meta) = component.meta_info().first() {
         match meta.kind() {
             WordType::MetaInfo(MetaData::HeadingLevel(e)) => e,
@@ -327,8 +326,7 @@ fn render_list(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cli
     list.render(area, buf);
 }
 
-#[expect(clippy::needless_pass_by_value, reason = "component is consumed by content() method")]
-fn render_code_block(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Clipping) {
+fn render_code_block(area: Rect, buf: &mut Buffer, component: &TextComponent, clip: Clipping) {
     let mut content = component
         .content()
         .iter()
