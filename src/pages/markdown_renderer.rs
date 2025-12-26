@@ -548,13 +548,16 @@ fn render_task(
     clip: Clipping,
     meta_info: &Word,
 ) {
-    const CHECKBOX: &str = "✅ ";
-    const UNCHECKED: &str = "❌ ";
+    let (checked, unchecked) = if GENERAL_CONFIG.emoji_check_marks {
+        ("✅ ", "❌ ")
+    } else {
+        ("[✓] ", "[ ] ")
+    };
 
     let checkbox = if meta_info.content() == "- [ ] " {
-        UNCHECKED
+        unchecked
     } else {
-        CHECKBOX
+        checked
     };
 
     let paragraph = Paragraph::new(checkbox);
