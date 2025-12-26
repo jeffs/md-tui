@@ -330,11 +330,7 @@ fn keyboard_mode_view(
                 }
 
                 let next = links.iter().min_by_key(|(_, row)| {
-                    if *row > (app.vertical_scroll + height / 3) {
-                        *row - (app.vertical_scroll + height / 3)
-                    } else {
-                        (app.vertical_scroll + height / 3) - *row
-                    }
+                    (*row).abs_diff(app.vertical_scroll + height / 3)
                 });
 
                 if let Some((index, _)) = next {

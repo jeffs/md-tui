@@ -212,14 +212,13 @@ impl ComponentRoot {
         while let Some(component) = iter.next() {
             let kind = component.kind();
             components.push(component);
-            if let Some(next) = iter.peek() {
-                if kind != TextNode::LineBreak && next.kind() != TextNode::LineBreak {
+            if let Some(next) = iter.peek()
+                && kind != TextNode::LineBreak && next.kind() != TextNode::LineBreak {
                     components.push(Component::TextComponent(TextComponent::new(
                         TextNode::LineBreak,
                         Vec::new(),
                     )));
                 }
-            }
         }
         Self {
             file_name: self.file_name,

@@ -34,15 +34,14 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
     for path in starting_paths {
         if path.is_dir() {
             stack.push_back(path);
-        } else if path.is_file() && path.extension().unwrap_or_default() == "md" {
-            if let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name()) {
+        } else if path.is_file() && path.extension().unwrap_or_default() == "md"
+            && let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name()) {
                 tx.send(Some(MdFile::new(
                     path_str.to_string(),
                     path_name.to_str().unwrap_or("UNKNOWN").to_string(),
                 )))
                 .unwrap();
             }
-        }
     }
 
     while let Some(path) = stack.pop_front() {
@@ -93,11 +92,10 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
                     path_name.to_string(),
                 )))
                 .unwrap();
-            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str()) {
-                if GENERAL_CONFIG.gitignore && file_name == ".gitignore" {
+            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str())
+                && GENERAL_CONFIG.gitignore && file_name == ".gitignore" {
                     add_to_gitingore(path, &mut ignored_files);
                 }
-            }
         }
     }
 
@@ -146,11 +144,10 @@ pub fn find_md_files() -> FileTree {
                 }
 
                 tree.add_file(MdFile::new(path_str.to_string(), path_name.to_string()));
-            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str()) {
-                if GENERAL_CONFIG.gitignore && file_name == ".gitignore" {
+            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str())
+                && GENERAL_CONFIG.gitignore && file_name == ".gitignore" {
                     add_to_gitingore(path, &mut ignored_files);
                 }
-            }
         }
     }
     tree.sort_name();
@@ -173,9 +170,9 @@ pub fn find_files(files: &[MdFile], query: &str) -> Vec<MdFile> {
             } else {
                 file.path.to_lowercase()
             };
-            let res = char_windows(&file_path, query.len())
-                .any(|window| damerau_levenshtein(window, query) == 0);
-            res
+            
+            char_windows(&file_path, query.len())
+                .any(|window| damerau_levenshtein(window, query) == 0)
         })
         .cloned()
         .collect()
