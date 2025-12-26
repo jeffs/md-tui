@@ -28,6 +28,7 @@ fn clips_lower_bound(area: Rect, component: &TextComponent) -> bool {
         > area.height
 }
 
+#[derive(Clone, Copy)]
 enum Clipping {
     Both,
     Upper,
@@ -86,7 +87,7 @@ impl Widget for TextComponent {
             TextNode::List => render_list(area, buf, self, clips),
             TextNode::CodeBlock => render_code_block(area, buf, self, clips),
             TextNode::Table(widths, heights) => {
-                render_table(area, buf, self, clips, widths, heights);
+                render_table(area, buf, self, clips, &widths, &heights);
             }
             TextNode::Quote => render_quote(area, buf, self, clips),
             TextNode::LineBreak => (),
@@ -129,8 +130,9 @@ fn style_word(word: &Word) -> Span<'_> {
                 .fg(color_config().striketrough_color)
                 .add_modifier(Modifier::CROSSED_OUT),
         ),
-        WordType::White => Span::styled(word.content(), Style::default().fg(Color::White)),
-        WordType::ListMarker => Span::styled(word.content(), Style::default().fg(Color::White)),
+        WordType::White | WordType::ListMarker => {
+            Span::styled(word.content(), Style::default().fg(Color::White))
+        }
         WordType::BoldItalic => Span::styled(
             word.content(),
             Style::default()
@@ -212,38 +214,18 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
 }
 
 fn style_heading(word: &Word, indent: u8) -> Span<'_> {
-    match indent {
-        1 => Span::styled(
-            word.content(),
-            Style::default().fg(color_config().heading_fg_color),
-        ),
-        2 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_2),
-        ),
-        3 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_3),
-        ),
-        4 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_4),
-        ),
-        5 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_5),
-        ),
-        6 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_6),
-        ),
-        _ => Span::styled(
-            word.content(),
-            Style::default().fg(color_config().heading_fg_color),
-        ),
-    }
+    let color = match indent {
+        2 => heading_colors().level_2,
+        3 => heading_colors().level_3,
+        4 => heading_colors().level_4,
+        5 => heading_colors().level_5,
+        6 => heading_colors().level_6,
+        _ => color_config().heading_fg_color,
+    };
+    Span::styled(word.content(), Style::default().fg(color))
 }
 
+#[expect(clippy::needless_pass_by_value, reason = "component is consumed by content() method")]
 fn render_heading(area: Rect, buf: &mut Buffer, component: TextComponent) {
     let indent = if let Some(meta) = component.meta_info().first() {
         match meta.kind() {
@@ -345,6 +327,7 @@ fn render_list(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cli
     list.render(area, buf);
 }
 
+#[expect(clippy::needless_pass_by_value, reason = "component is consumed by content() method")]
 fn render_code_block(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Clipping) {
     let mut content = component
         .content()
@@ -386,13 +369,15 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: TextComponent, cli
     paragraph.render(area, buf);
 }
 
+#[expect(clippy::too_many_lines, reason = "table rendering is complex but cohesive")]
+#[expect(clippy::cast_possible_truncation, reason = "word lengths bounded by terminal width")]
 fn render_table(
     area: Rect,
     buf: &mut Buffer,
     component: TextComponent,
     clip: Clipping,
-    widths: Vec<u16>,
-    heights: Vec<u16>,
+    widths: &[u16],
+    heights: &[u16],
 ) {
     let scroll_offset = component.scroll_offset();
     let y_offset = component.y_offset();
@@ -526,7 +511,7 @@ fn render_table(
         })
         .collect::<Vec<_>>();
 
-    let table = Table::new(rows, widths)
+    let table = Table::new(rows, widths.to_vec())
         .header(
             header.style(
                 Style::default()

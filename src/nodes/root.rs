@@ -92,7 +92,9 @@ impl ComponentRoot {
             })
             .flat_map(|c| {
                 let mut heights = c.selected_heights();
-                heights.iter_mut().for_each(|h| *h += c.y_offset() as usize);
+                for h in &mut heights {
+                    *h += c.y_offset() as usize;
+                }
                 heights
             })
             .collect()
@@ -103,6 +105,8 @@ impl ComponentRoot {
         self.components.clear();
     }
 
+    /// # Errors
+    /// Returns an error if the index is out of bounds.
     pub fn select(&mut self, index: usize) -> Result<u16, String> {
         self.deselect();
         self.is_focused = true;
@@ -131,27 +135,25 @@ impl ComponentRoot {
         }
     }
 
-    #[must_use] 
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason = "row index bounded by terminal height")]
     pub fn link_index_and_height(&self) -> Vec<(usize, u16)> {
         let mut indexes = Vec::new();
         let mut count = 0;
-        self.components
-            .iter()
-            .filter_map(|f| match f {
-                Component::TextComponent(comp) => Some(comp),
-                Component::Image(_) => None,
-            })
-            .for_each(|comp| {
-                let height = comp.y_offset();
-                comp.content().iter().enumerate().for_each(|(index, row)| {
-                    row.iter().for_each(|c| {
-                        if c.kind() == WordType::Link || c.kind() == WordType::Selected {
-                            indexes.push((count, height + index as u16));
-                            count += 1;
-                        }
-                    });
-                });
-            });
+        for comp in self.components.iter().filter_map(|f| match f {
+            Component::TextComponent(comp) => Some(comp),
+            Component::Image(_) => None,
+        }) {
+            let height = comp.y_offset();
+            for (index, row) in comp.content().iter().enumerate() {
+                for c in row {
+                    if c.kind() == WordType::Link || c.kind() == WordType::Selected {
+                        indexes.push((count, height + index as u16));
+                        count += 1;
+                    }
+                }
+            }
+        }
 
         indexes
     }
@@ -166,6 +168,8 @@ impl ComponentRoot {
         }
     }
 
+    /// # Errors
+    /// Returns an error if the heading is not found.
     pub fn heading_offset(&self, heading: &str) -> Result<u16, String> {
         let mut y_offset = 0;
         for component in &self.components {
@@ -193,7 +197,9 @@ impl ComponentRoot {
             .collect()
     }
 
-    #[must_use] 
+    /// # Panics
+    /// Panics if no component is focused or the focused component has no highlight link.
+    #[must_use]
     pub fn selected(&self) -> &str {
         let block = self
             .components

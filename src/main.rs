@@ -34,6 +34,7 @@ use ratatui_image::{FilterType, Resize, StatefulImage};
 
 const EMPTY_FILE: &str = "";
 
+#[expect(clippy::unnecessary_wraps, reason = "main returns Result for consistency with error handling pattern")]
 fn main() -> Result<(), Box<dyn Error>> {
     // Set up panic handler. If not set up, the terminal will be left in a broken state if a panic
     // occurs
@@ -59,6 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[expect(clippy::too_many_lines, reason = "main event loop is complex but cohesive")]
 fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -136,9 +138,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             }
         }
         if app.set_width(terminal.size()?.width) {
-            let url = if let Some(url) = markdown.file_name() {
-                url
-            } else {
+            let Some(url) = markdown.file_name() else {
                 app.mode = Mode::FileTree;
                 continue;
             };
@@ -430,18 +430,14 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
 }
 
 fn open_editor(f: &mut Frame, app: &mut App, file_name: Option<&str>) {
-    let editor = if let Ok(editor) = env::var("EDITOR") {
-        editor
-    } else {
+    let Ok(editor) = env::var("EDITOR") else {
         app.error_box
             .set_message("No editor found. Please set the EDITOR environment variable".to_owned());
         app.boxes = Boxes::Error;
         return;
     };
 
-    let file_name = if let Some(file_name) = file_name {
-        file_name
-    } else {
+    let Some(file_name) = file_name else {
         app.error_box
             .set_message("No file found to open in editor".to_owned());
         app.boxes = Boxes::Error;

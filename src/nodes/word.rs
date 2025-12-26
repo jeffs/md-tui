@@ -91,6 +91,7 @@ impl From<MdParseEnum> for WordType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(clippy::struct_field_names, reason = "word_type clearly describes the field's purpose")]
 pub struct Word {
     content: String,
     word_type: WordType,
@@ -140,6 +141,7 @@ impl Word {
         !matches!(self.kind(), WordType::MetaInfo(_) | WordType::LinkData)
     }
 
+    #[must_use]
     pub fn split_off(&mut self, at: usize) -> Word {
         Word {
             content: self.content.split_off(at),

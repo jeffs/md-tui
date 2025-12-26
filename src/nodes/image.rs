@@ -14,7 +14,9 @@ pub struct ImageComponent {
 }
 
 impl ImageComponent {
-    pub fn new<T: ToString>(image: DynamicImage, height: u32, alt_text: T) -> Option<Self> {
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason = "image height capped at 20 rows")]
+    pub fn new(image: DynamicImage, height: u32, alt_text: &str) -> Option<Self> {
         let picker = Picker::from_query_stdio().ok()?;
 
         let image = picker.new_resize_protocol(image);

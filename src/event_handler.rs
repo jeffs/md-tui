@@ -37,6 +37,8 @@ pub fn handle_keyboard_input(
     }
 }
 
+#[expect(clippy::too_many_lines, reason = "event handler is a large match expression")]
+#[expect(clippy::cast_possible_truncation, reason = "UI positions bounded by terminal size")]
 pub fn keyboard_mode_file_tree(
     key: KeyEvent,
     app: &mut App,
@@ -185,6 +187,8 @@ pub fn keyboard_mode_file_tree(
     KeyBoardAction::Continue
 }
 
+#[expect(clippy::too_many_lines, reason = "event handler is a large match expression")]
+#[expect(clippy::cast_possible_truncation, reason = "UI positions bounded by terminal size")]
 fn keyboard_mode_view(
     key: KeyEvent,
     app: &mut App,
@@ -461,7 +465,10 @@ fn keyboard_mode_view(
                             (url.to_string(), None)
                         };
 
-                        let url = if url.ends_with(".md") {
+                        let url = if std::path::Path::new(&url)
+                            .extension()
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+                        {
                             url
                         } else {
                             format!("{url}.md")

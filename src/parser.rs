@@ -18,6 +18,9 @@ use crate::nodes::{
 #[grammar = "md.pest"]
 pub struct MdParser;
 
+/// # Panics
+/// Panics if the parsed markdown text has no root element.
+#[must_use]
 pub fn parse_markdown(name: Option<&str>, content: &str, width: u16) -> ComponentRoot {
     let root: Pairs<'_, Rule> = if let Ok(file) = MdParser::parse(Rule::txt, content) {
         file
@@ -72,6 +75,8 @@ fn is_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://")
 }
 
+#[expect(clippy::too_many_lines, reason = "parse_component handles all markdown node types in one match")]
+#[expect(clippy::cast_possible_truncation, reason = "heading level is bounded by markdown spec (1-6)")]
 fn parse_component(parse_node: ParseNode) -> Component {
     match parse_node.kind() {
         MdParseEnum::Image => {
@@ -107,7 +112,7 @@ fn parse_component(parse_node: ParseNode) -> Component {
             if let Some(img) = image.as_ref() {
                 let height = img.height();
 
-                let comp = ImageComponent::new(img.to_owned(), height, alt_text.clone());
+                let comp = ImageComponent::new(img.to_owned(), height, &alt_text);
 
                 if let Some(comp) = comp {
                     Component::Image(comp)
@@ -429,14 +434,14 @@ fn print_component(component: &TextComponent, _depth: usize) {
         component.height(),
         component.y_offset()
     );
-    component.meta_info().iter().for_each(|w| {
+    for w in component.meta_info() {
         println!("Meta: {}, kind: {:?}", w.content(), w.kind());
-    });
-    component.content().iter().for_each(|w| {
-        w.iter().for_each(|w| {
+    }
+    for row in component.content() {
+        for w in row {
             println!("Content:{}, kind: {:?}", w.content(), w.kind());
-        });
-    });
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -594,7 +599,6 @@ impl From<Rule> for MdParseEnum {
                 Self::Heading
             }
             Rule::list_container => Self::ListContainer,
-            Rule::paragraph => Self::Paragraph,
             Rule::code_block | Rule::indented_code_block => Self::CodeBlock,
             Rule::table => Self::Table,
             Rule::quote => Self::Quote,
@@ -609,7 +613,8 @@ impl From<Rule> for MdParseEnum {
             Rule::important => Self::Imortant,
             Rule::caution => Self::Caution,
 
-            Rule::p_char
+            Rule::paragraph
+            | Rule::p_char
             | Rule::t_char
             | Rule::link_char
             | Rule::wiki_link_char

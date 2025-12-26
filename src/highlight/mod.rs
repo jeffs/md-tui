@@ -89,8 +89,10 @@ pub enum HighlightInfo {
     Unhighlighted,
 }
 
+/// # Panics
+/// Panics if syntax highlighting fails for a supported language.
 #[allow(unused_variables)]
-#[must_use] 
+#[must_use]
 pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
     match language {
         #[cfg(feature = "tree-sitter-bash")]

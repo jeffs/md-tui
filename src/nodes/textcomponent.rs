@@ -62,7 +62,8 @@ impl TextComponent {
         }
     }
 
-    #[must_use] 
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason = "content lines bounded by terminal height")]
     pub fn new_formatted(kind: TextNode, content: Vec<Vec<Word>>) -> Self {
         let meta_info: Vec<Word> = content
             .iter()
@@ -107,13 +108,13 @@ impl TextComponent {
 
             let mut lines = Vec::new();
 
-            moved_content.iter().for_each(|line| {
+            for line in &moved_content {
                 let noe = line
                     .iter()
                     .map(|c| c.iter().map(super::word::Word::content).join(""))
                     .join(" ");
                 lines.push(noe);
-            });
+            }
 
             lines
         } else {
@@ -183,6 +184,8 @@ impl TextComponent {
             });
     }
 
+    /// # Errors
+    /// Returns an error if the index is out of bounds.
     pub fn visually_select(&mut self, index: usize) -> Result<(), String> {
         self.focused = true;
         self.focused_index = index;
@@ -223,6 +226,8 @@ impl TextComponent {
         selection
     }
 
+    /// # Errors
+    /// Returns an error if no link is focused.
     pub fn highlight_link(&self) -> Result<&str, String> {
         Ok(self
             .meta_info()
@@ -274,7 +279,9 @@ impl TextComponent {
 
     pub fn transform(&mut self, width: u16) {
         match self.kind {
-            TextNode::Heading => self.height = 1,
+            TextNode::Heading | TextNode::LineBreak | TextNode::HorizontalSeperator => {
+                self.height = 1;
+            }
             TextNode::List => {
                 transform_list(self, width);
             }
@@ -284,13 +291,9 @@ impl TextComponent {
             TextNode::Paragraph | TextNode::Task | TextNode::Quote => {
                 transform_paragraph(self, width);
             }
-            TextNode::LineBreak => {
-                self.height = 1;
-            }
             TextNode::Table(_, _) => {
                 transform_table(self, width);
             }
-            TextNode::HorizontalSeperator => self.height = 1,
             TextNode::Image => unreachable!("Image should not be transformed"),
         }
     }
@@ -376,6 +379,7 @@ fn word_wrapping<'a>(
     lines
 }
 
+#[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
 fn transform_paragraph(component: &mut TextComponent, width: u16) {
     let width = match component.kind {
         TextNode::Paragraph => width as usize - 1,
@@ -398,6 +402,7 @@ fn transform_paragraph(component: &mut TextComponent, width: u16) {
     component.content = lines;
 }
 
+#[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
 fn transform_codeblock(component: &mut TextComponent) {
     let language = if let Some(word) = component.meta_info().first() {
         word.content()
@@ -472,6 +477,8 @@ fn transform_codeblock(component: &mut TextComponent) {
     component.height = height;
 }
 
+#[expect(clippy::too_many_lines, reason = "list transformation is complex but cohesive")]
+#[expect(clippy::cast_possible_truncation, reason = "line count bounded by terminal height")]
 fn transform_list(component: &mut TextComponent, width: u16) {
     let mut len = 0;
     let mut lines = Vec::new();
@@ -632,6 +639,8 @@ fn transform_list(component: &mut TextComponent, width: u16) {
     component.content = lines;
 }
 
+#[expect(clippy::cast_possible_truncation, reason = "table dimensions bounded by terminal size")]
+#[expect(clippy::cast_sign_loss, reason = "table column widths are always positive")]
 fn transform_table(component: &mut TextComponent, width: u16) {
     let content = &mut component.content;
 

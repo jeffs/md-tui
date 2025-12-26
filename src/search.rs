@@ -21,6 +21,9 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
     }
 }
 
+/// # Panics
+/// Panics if the channel receiver is disconnected.
+#[expect(clippy::needless_pass_by_value, reason = "Sender is typically passed by value in channel patterns")]
 pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std::path::PathBuf>) {
     let mut ignored_files = Vec::new();
 
@@ -49,14 +52,10 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
             entries
                 .into_iter()
                 .sorted_unstable_by(|a, b| {
-                    let a = if let Ok(a) = a {
-                        a
-                    } else {
+                    let Ok(a) = a else {
                         return std::cmp::Ordering::Equal;
                     };
-                    let b = if let Ok(b) = b {
-                        b
-                    } else {
+                    let Ok(b) = b else {
                         return std::cmp::Ordering::Equal;
                     };
                     a.path().cmp(&b.path())
@@ -215,8 +214,8 @@ pub fn find(query: &str, text: &str, precision: usize) -> Vec<usize> {
 }
 
 /// Returns line numbers that match the query with the given precision.
-#[must_use] 
-pub fn line_match(query: &str, text: Vec<&str>, precision: usize) -> Vec<usize> {
+#[must_use]
+pub fn line_match(query: &str, text: &[&str], precision: usize) -> Vec<usize> {
     text.iter()
         .enumerate()
         .filter_map(|(i, line)| {
@@ -229,10 +228,10 @@ pub fn line_match(query: &str, text: Vec<&str>, precision: usize) -> Vec<usize> 
         .collect()
 }
 
-#[must_use] 
+#[must_use]
 pub fn line_match_and_index(
     query: &str,
-    lines: Vec<&str>,
+    lines: &[&str],
     precision: usize,
 ) -> Vec<(usize, usize)> {
     lines
@@ -246,8 +245,8 @@ pub fn line_match_and_index(
         .collect()
 }
 
-#[must_use] 
-pub fn find_with_ref<'a>(query: &str, text: Vec<&'a Word>) -> Vec<&'a Word> {
+#[must_use]
+pub fn find_with_ref<'a>(query: &str, text: &[&'a Word]) -> Vec<&'a Word> {
     let window_size = query
         .split_whitespace()
         .fold(0usize, |acc, _| acc + 2)
@@ -296,9 +295,9 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
         };
 
         if damerau_levenshtein(query, &words) == 0 {
-            window
-                .iter_mut()
-                .for_each(|word| word.set_kind(WordType::Selected));
+            for word in window.iter_mut() {
+                word.set_kind(WordType::Selected);
+            }
         }
     });
 }
@@ -382,7 +381,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "World"];
         let query = "world";
         let precision = 0;
-        let result = line_match(query, text, precision);
+        let result = line_match(query, &text, precision);
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -391,7 +390,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "World"];
         let query = "world";
         let precision = 1;
-        let result = line_match(query, text, precision);
+        let result = line_match(query, &text, precision);
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -400,7 +399,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "World"];
         let query = "wrold";
         let precision = 2;
-        let result = line_match(query, text, precision);
+        let result = line_match(query, &text, precision);
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -409,7 +408,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "hello world"];
         let query = "world";
         let precision = 0;
-        let result = line_match_and_index(query, text, precision);
+        let result = line_match_and_index(query, &text, precision);
         assert_eq!(result, vec![(2, 0), (3, 6)]);
     }
 
@@ -418,7 +417,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "hello world"];
         let query = "wrold";
         let precision = 2;
-        let result = line_match_and_index(query, text, precision);
+        let result = line_match_and_index(query, &text, precision);
         assert_eq!(result, vec![(2, 0), (3, 6)]);
     }
 
@@ -427,7 +426,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", " hello world"];
         let query = "world";
         let precision = 0;
-        let result = line_match_and_index(query, text, precision);
+        let result = line_match_and_index(query, &text, precision);
         assert_eq!(result, vec![(2, 0), (3, 7)]);
     }
 
@@ -443,7 +442,7 @@ mod tests {
         let componet = Component::TextComponent(TextComponent::new(TextNode::Paragraph, text));
         let root = ComponentRoot::new(None, vec![componet]);
         let query = "world";
-        let result = find_with_ref(query, root.words());
+        let result = find_with_ref(query, &root.words());
         assert_eq!(result.len(), 2);
     }
     #[test]
@@ -459,7 +458,7 @@ mod tests {
         let componet = Component::TextComponent(TextComponent::new(TextNode::Paragraph, text));
         let root = ComponentRoot::new(None, vec![componet]);
         let query = "hello world";
-        let result = find_with_ref(query, root.words());
+        let result = find_with_ref(query, &root.words());
         assert_eq!(result.len(), 3);
     }
 
@@ -476,12 +475,13 @@ mod tests {
         let componet = Component::TextComponent(TextComponent::new(TextNode::Paragraph, text));
         let root = ComponentRoot::new(None, vec![componet]);
         let query = "hello world";
-        let result = find_with_ref(query, root.words());
+        let words = root.words();
+        let result = find_with_ref(query, &words);
 
-        assert_ne!(result[0], root.words()[0]);
-        assert_eq!(result[0], root.words()[1]);
-        assert_eq!(result[1], root.words()[2]);
-        assert_eq!(result[2], root.words()[3]);
+        assert_ne!(result[0], words[0]);
+        assert_eq!(result[0], words[1]);
+        assert_eq!(result[1], words[2]);
+        assert_eq!(result[2], words[3]);
     }
 
     #[test]
@@ -495,11 +495,11 @@ your markdown notes, or opening external links from someones README.
 
         let markdown = parse_markdown(None, text, 80);
 
-        let result = find_with_ref("in", markdown.words());
+        let result = find_with_ref("in", &markdown.words());
         dbg!(&result);
         assert_eq!(result.len(), 2);
 
-        let result = find_with_ref("markdown notes,", markdown.words());
+        let result = find_with_ref("markdown notes,", &markdown.words());
         assert_eq!(result.len(), 3);
     }
 

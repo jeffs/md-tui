@@ -1,5 +1,6 @@
+use std::sync::LazyLock;
+
 use config::{Config, Environment, File};
-use lazy_static::lazy_static;
 use serde::Deserialize;
 
 #[derive(Debug)]
@@ -18,26 +19,24 @@ pub enum Centering {
     Right,
 }
 
-lazy_static! {
-    pub static ref GENERAL_CONFIG: GeneralConfig = {
-        let config_dir = dirs::home_dir().unwrap();
-        let config_file = config_dir.join(".config").join("mdt").join("config.toml");
-        let settings = Config::builder()
-            .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
-            .add_source(Environment::with_prefix("MDT").separator("_"))
-            .build()
-            .unwrap();
+pub static GENERAL_CONFIG: LazyLock<GeneralConfig> = LazyLock::new(|| {
+    let config_dir = dirs::home_dir().unwrap();
+    let config_file = config_dir.join(".config").join("mdt").join("config.toml");
+    let settings = Config::builder()
+        .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
+        .add_source(Environment::with_prefix("MDT").separator("_"))
+        .build()
+        .unwrap();
 
-        let width = settings.get::<u16>("width").unwrap_or(100);
-        GeneralConfig {
-            // width = 0 means "use full terminal width"
-            width: if width == 0 { u16::MAX } else { width },
-            gitignore: settings.get::<bool>("gitignore").unwrap_or(false),
-            centering: settings
-                .get::<Centering>("alignment")
-                .unwrap_or(Centering::Left),
-            help_box: settings.get::<bool>("help_box").unwrap_or(true),
-            emoji_check_marks: settings.get::<bool>("emoji_check_marks").unwrap_or(true),
-        }
-    };
-}
+    let width = settings.get::<u16>("width").unwrap_or(100);
+    GeneralConfig {
+        // width = 0 means "use full terminal width"
+        width: if width == 0 { u16::MAX } else { width },
+        gitignore: settings.get::<bool>("gitignore").unwrap_or(false),
+        centering: settings
+            .get::<Centering>("alignment")
+            .unwrap_or(Centering::Left),
+        help_box: settings.get::<bool>("help_box").unwrap_or(true),
+        emoji_check_marks: settings.get::<bool>("emoji_check_marks").unwrap_or(true),
+    }
+});
