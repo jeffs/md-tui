@@ -79,7 +79,7 @@ fn is_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://")
 }
 
-#[expect(clippy::too_many_lines, reason = "parse_component handles all markdown node types in one match")]
+#[expect(clippy::too_many_lines, reason = "match must handle all Rule variants in one place for exhaustiveness checking")]
 #[expect(clippy::cast_possible_truncation, reason = "heading level is bounded by markdown spec (1-6)")]
 fn parse_component(parse_node: ParseNode) -> Component {
     match parse_node.kind() {

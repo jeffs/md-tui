@@ -45,7 +45,7 @@ pub struct ColorConfig {
 /// # Panics
 /// Panics if home directory cannot be determined.
 #[must_use]
-#[expect(clippy::too_many_lines, reason = "config loading for many fields is verbose but straightforward")]
+#[expect(clippy::too_many_lines, reason = "each color field follows the same pattern; extracting would add indirection without improving clarity")]
 pub fn read_color_config_from_file() -> ColorConfig {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir.join(".config").join("mdt").join("config.toml");
