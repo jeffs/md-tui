@@ -7,6 +7,7 @@ pub struct GeneralConfig {
     pub width: u16,
     pub gitignore: bool,
     pub centering: Centering,
+    pub help_box: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +33,7 @@ lazy_static! {
             centering: settings
                 .get::<Centering>("alignment")
                 .unwrap_or(Centering::Left),
+            help_box: settings.get::<bool>("help_box").unwrap_or(true),
         }
     };
 }
