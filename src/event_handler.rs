@@ -108,9 +108,7 @@ pub fn keyboard_mode_file_tree(
             }
 
             Action::Enter => {
-                let file = if let Some(file) = file_tree.selected() {
-                    file
-                } else {
+                let Some(file) = file_tree.selected() else {
                     app.message_box.set_message("No file selected".to_string());
                     app.boxes = Boxes::Error;
                     return KeyBoardAction::Continue;

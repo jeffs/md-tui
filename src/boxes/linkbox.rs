@@ -10,14 +10,20 @@ pub struct LinkBox {
 }
 
 impl LinkBox {
-    #[must_use] 
+    #[must_use]
     pub fn new(message: String) -> Self {
         Self { message }
     }
 
-    #[must_use] 
+    /// # Panics
+    ///
+    /// Panics on overflow.
+    #[must_use]
     pub fn dimensions(&self) -> (u16, u16) {
-        ((self.message.len() / 30) as u16 + 4, 50)
+        (
+            u16::try_from(self.message.len() / 30).expect("too many messages") + 4,
+            50,
+        )
     }
 
     pub fn set_message(&mut self, message: String) {

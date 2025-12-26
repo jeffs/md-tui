@@ -60,7 +60,7 @@ impl App {
                 self.scroll = std::cmp::min(
                     self.scroll.saturating_add(1),
                     len.saturating_sub(self.area.height),
-                )
+                );
             }
         }
         true

@@ -10,14 +10,20 @@ pub struct ErrorBox {
 }
 
 impl ErrorBox {
-    #[must_use] 
+    #[must_use]
     pub fn new(message: String) -> Self {
         Self { message }
     }
 
-    #[must_use] 
+    /// # Panics
+    ///
+    /// Panics on overflow.
+    #[must_use]
     pub fn dimensions(&self) -> (u16, u16) {
-        ((self.message.len() / 30) as u16 + 4, 30)
+        (
+            u16::try_from(self.message.len() / 30).expect("too many messages") + 4,
+            30,
+        )
     }
 
     pub fn set_message(&mut self, message: String) {
