@@ -219,8 +219,8 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
+        if event::poll(timeout)?
+            && let Event::Key(key) = event::read()? {
                 match handle_keyboard_input(
                     key,
                     &mut app,
@@ -240,7 +240,6 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                     }
                 }
             }
-        }
         if last_tick.elapsed() >= tick_rate {
             last_tick = Instant::now();
         }
