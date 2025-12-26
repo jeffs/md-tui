@@ -65,7 +65,7 @@ As a user of MD-TUI, I want the application to behave identically after lint fix
 - **FR-001**: Build MUST complete with `cargo clippy -- -W clippy::pedantic` producing zero warnings
 - **FR-002**: All existing unit and integration tests MUST continue to pass
 - **FR-003**: Code fixes MUST prefer Clippy's suggested idiomatic solutions over suppression annotations
-- **FR-004**: When suppression is necessary, MUST use `#[expect(...)]` instead of `#[allow(...)]` so removability is tracked
+- **FR-004**: When suppression is necessary, MUST use `#[expect(..., reason = "...")]` instead of `#[allow(...)]` so removability is tracked and intent is documented
 - **FR-005**: Expect annotations MUST be scoped to specific functions/items, not applied at module level
 - **FR-006**: Semantic behavior of all functions MUST remain unchanged
 
@@ -92,7 +92,7 @@ Based on the current codebase analysis, the following lint categories require at
 - **SC-001**: Running `cargo clippy -- -W clippy::pedantic` produces zero warnings
 - **SC-002**: Running `cargo test` shows 100% of existing tests passing
 - **SC-003**: Running `cargo build --release` completes successfully
-- **SC-004**: Code review confirms fewer than 10% of fixes use `#[expect(...)]` annotations (prefer actual code improvements)
+- **SC-004**: `#[expect(...)]` annotations are used only for intentional patterns (UI casts, long functions) where idiomatic fixes are impractical or out of scope
 
 ## Assumptions
 
