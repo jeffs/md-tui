@@ -314,6 +314,10 @@ impl FileTree {
         self.all_files.push(file.clone());
         self.files.push(MdFileComponent::File(file));
         self.files.push(MdFileComponent::Spacer);
+        // Auto-select first file so there's always a selection
+        if self.all_files.len() == 1 {
+            self.list_state.select(Some(0));
+        }
     }
 
     #[must_use]
@@ -408,7 +412,9 @@ impl Widget for FileTree {
 
         StatefulWidget::render(items, area, buf, &mut state);
 
-        let y_offset: u16 = y_height.try_into().expect("y position fits in terminal height");
+        let y_offset: u16 = y_height
+            .try_into()
+            .expect("y position fits in terminal height");
         let area = Rect {
             y: area.y + y_offset + 2,
             ..area

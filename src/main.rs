@@ -52,7 +52,7 @@ fn main() {
     ratatui::restore();
 
     if let Err(err) = res {
-        println!("{err:?}");
+        eprintln!("{err}");
     }
 }
 
@@ -210,6 +210,14 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                 f.render_widget(app.link_box.clone(), link_area);
             }
         })?;
+
+        // Exit early if no markdown files found after file discovery completes
+        if file_tree.loaded() && file_tree.all_files().is_empty() && app.mode == Mode::FileTree {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "No markdown files found in the specified location.",
+            ));
+        }
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
