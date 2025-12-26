@@ -14,14 +14,20 @@ pub struct ImageComponent {
 }
 
 impl ImageComponent {
-    pub fn new<T: ToString>(image: DynamicImage, height: u32, alt_text: T) -> Option<Self> {
+    /// # Panics
+    ///
+    /// Panics if image height conversion fails (impossible since height is capped at 20).
+    #[must_use]
+    pub fn new(image: DynamicImage, height: u32, alt_text: &str) -> Option<Self> {
         let picker = Picker::from_query_stdio().ok()?;
 
         let image = picker.new_resize_protocol(image);
 
         let (_, f_height) = picker.font_size();
 
-        let height = cmp::min(height / f_height as u32, 20) as u16;
+        let height: u16 = cmp::min(height / u32::from(f_height), 20)
+            .try_into()
+            .expect("image height capped at 20 rows");
 
         Some(Self {
             height,
@@ -40,14 +46,17 @@ impl ImageComponent {
         self.scroll_offset = offset;
     }
 
+    #[must_use]
     pub fn scroll_offset(&self) -> u16 {
         self.scroll_offset
     }
 
+    #[must_use]
     pub fn y_offset(&self) -> u16 {
         self.y_offset
     }
 
+    #[must_use]
     pub fn height(&self) -> u16 {
         self.height
     }

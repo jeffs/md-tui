@@ -1,8 +1,7 @@
-use std::fmt;
+use std::{fmt, sync::LazyLock};
 
 use config::{Config, Environment, File, Value, ValueKind};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use lazy_static::lazy_static;
 
 /// Represents a single key binding with optional modifiers
 #[derive(Debug, Clone, PartialEq)]
@@ -12,7 +11,8 @@ pub struct KeyBinding {
 }
 
 impl KeyBinding {
-    /// Create a new KeyBinding from a character (no modifiers)
+    /// Create a new `KeyBinding` from a character (no modifiers)
+    #[must_use]
     pub fn from_char(c: char) -> Self {
         Self {
             key: KeyCode::Char(c),
@@ -20,7 +20,8 @@ impl KeyBinding {
         }
     }
 
-    /// Check if this binding matches a KeyEvent
+    /// Check if this binding matches a `KeyEvent`
+    #[must_use]
     pub fn matches(&self, event: &KeyEvent) -> bool {
         if self.key != event.code {
             return false;
@@ -42,7 +43,7 @@ impl fmt::Display for KeyBinding {
         // Format the key
         match self.key {
             KeyCode::Char(' ') => write!(f, "space"),
-            KeyCode::Char(c) => write!(f, "{}", c),
+            KeyCode::Char(c) => write!(f, "{c}"),
             KeyCode::Tab => write!(f, "tab"),
             KeyCode::Enter => write!(f, "enter"),
             KeyCode::Esc => write!(f, "esc"),
@@ -53,14 +54,14 @@ impl fmt::Display for KeyBinding {
 }
 
 /// Format a Vec<KeyBinding> for display (shows first binding only for brevity)
+#[must_use]
 pub fn format_bindings(bindings: &[KeyBinding]) -> String {
     bindings
         .first()
-        .map(|b| b.to_string())
-        .unwrap_or_else(|| "?".to_string())
+        .map_or_else(|| "?".to_string(), std::string::ToString::to_string)
 }
 
-/// Parse a key string like "k", "space", "C-e" into a KeyBinding
+/// Parse a key string like "k", "space", "C-e" into a `KeyBinding`
 fn parse_key_string(s: &str) -> Option<KeyBinding> {
     let s = s.trim();
     if s.is_empty() {
@@ -106,9 +107,7 @@ fn parse_bindings(value: &Value, default: char) -> Vec<KeyBinding> {
     match &value.kind {
         ValueKind::String(s) => {
             // Single string -> single-element Vec
-            parse_key_string(s)
-                .map(|kb| vec![kb])
-                .unwrap_or_else(|| vec![KeyBinding::from_char(default)])
+            parse_key_string(s).map_or_else(|| vec![KeyBinding::from_char(default)], |kb| vec![kb])
         }
         ValueKind::Array(arr) => {
             // Array of strings
@@ -134,10 +133,10 @@ fn parse_bindings(value: &Value, default: char) -> Vec<KeyBinding> {
 
 /// Helper to get bindings from config with a default char
 fn get_bindings(settings: &Config, key: &str, default: char) -> Vec<KeyBinding> {
-    settings
-        .get::<Value>(key)
-        .map(|v| parse_bindings(&v, default))
-        .unwrap_or_else(|_| vec![KeyBinding::from_char(default)])
+    settings.get::<Value>(key).map_or_else(
+        |_| vec![KeyBinding::from_char(default)],
+        |v| parse_bindings(&v, default),
+    )
 }
 
 pub enum Action {
@@ -192,15 +191,14 @@ fn matches_any(bindings: &[KeyBinding], event: &KeyEvent) -> bool {
     bindings.iter().any(|b| b.matches(event))
 }
 
+#[must_use]
 pub fn key_to_action(event: &KeyEvent) -> Action {
     // Check for hardcoded keys first (arrow keys, etc.)
     match event.code {
         KeyCode::Up => return Action::Up,
         KeyCode::Down => return Action::Down,
-        KeyCode::PageUp => return Action::PageUp,
-        KeyCode::PageDown => return Action::PageDown,
-        KeyCode::Right => return Action::PageDown,
-        KeyCode::Left => return Action::PageUp,
+        KeyCode::PageUp | KeyCode::Left => return Action::PageUp,
+        KeyCode::PageDown | KeyCode::Right => return Action::PageDown,
         KeyCode::Enter => return Action::Enter,
         KeyCode::Esc => return Action::Escape,
         _ => {}
@@ -273,35 +271,33 @@ pub fn key_to_action(event: &KeyEvent) -> Action {
     Action::None
 }
 
-lazy_static! {
-    pub static ref KEY_CONFIG: KeyConfig = {
-        let config_dir = dirs::home_dir().unwrap();
-        let config_file = config_dir.join(".config").join("mdt").join("config.toml");
-        let settings = Config::builder()
-            .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
-            .add_source(Environment::with_prefix("MDT").separator("_"))
-            .build()
-            .unwrap();
+pub static KEY_CONFIG: LazyLock<KeyConfig> = LazyLock::new(|| {
+    let config_dir = dirs::home_dir().unwrap();
+    let config_file = config_dir.join(".config").join("mdt").join("config.toml");
+    let settings = Config::builder()
+        .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
+        .add_source(Environment::with_prefix("MDT").separator("_"))
+        .build()
+        .unwrap();
 
-        KeyConfig {
-            up: get_bindings(&settings, "up", 'k'),
-            down: get_bindings(&settings, "down", 'j'),
-            page_up: get_bindings(&settings, "page_up", 'u'),
-            page_down: get_bindings(&settings, "page_down", 'd'),
-            half_page_up: get_bindings(&settings, "half_page_up", 'h'),
-            half_page_down: get_bindings(&settings, "half_page_down", 'l'),
-            search: get_bindings(&settings, "search", 'f'),
-            select_link: get_bindings(&settings, "select_link", 's'),
-            select_link_alt: get_bindings(&settings, "select_link_alt", 'S'),
-            search_next: get_bindings(&settings, "search_next", 'n'),
-            search_previous: get_bindings(&settings, "search_previous", 'N'),
-            edit: get_bindings(&settings, "edit", 'e'),
-            hover: get_bindings(&settings, "hover", 'K'),
-            top: get_bindings(&settings, "top", 'g'),
-            bottom: get_bindings(&settings, "bottom", 'G'),
-            back: get_bindings(&settings, "back", 'b'),
-            file_tree: get_bindings(&settings, "file_tree", 't'),
-            sort: get_bindings(&settings, "sort", 'o'),
-        }
-    };
-}
+    KeyConfig {
+        up: get_bindings(&settings, "up", 'k'),
+        down: get_bindings(&settings, "down", 'j'),
+        page_up: get_bindings(&settings, "page_up", 'u'),
+        page_down: get_bindings(&settings, "page_down", 'd'),
+        half_page_up: get_bindings(&settings, "half_page_up", 'h'),
+        half_page_down: get_bindings(&settings, "half_page_down", 'l'),
+        search: get_bindings(&settings, "search", 'f'),
+        select_link: get_bindings(&settings, "select_link", 's'),
+        select_link_alt: get_bindings(&settings, "select_link_alt", 'S'),
+        search_next: get_bindings(&settings, "search_next", 'n'),
+        search_previous: get_bindings(&settings, "search_previous", 'N'),
+        edit: get_bindings(&settings, "edit", 'e'),
+        hover: get_bindings(&settings, "hover", 'K'),
+        top: get_bindings(&settings, "top", 'g'),
+        bottom: get_bindings(&settings, "bottom", 'G'),
+        back: get_bindings(&settings, "back", 'b'),
+        file_tree: get_bindings(&settings, "file_tree", 't'),
+        sort: get_bindings(&settings, "sort", 'o'),
+    }
+});

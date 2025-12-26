@@ -20,7 +20,7 @@ pub enum TextNode {
     Heading,
     Task,
     List,
-    /// (widths_by_column, heights_by_row)
+    /// (`widths_by_column`, `heights_by_row`)
     Table(Vec<u16>, Vec<u16>),
     CodeBlock,
     Quote,
@@ -40,6 +40,7 @@ pub struct TextComponent {
 }
 
 impl TextComponent {
+    #[must_use]
     pub fn new(kind: TextNode, content: Vec<Word>) -> Self {
         let meta_info: Vec<Word> = content
             .iter()
@@ -47,7 +48,10 @@ impl TextComponent {
             .cloned()
             .collect();
 
-        let content = content.into_iter().filter(|c| c.is_renderable()).collect();
+        let content = content
+            .into_iter()
+            .filter(super::word::Word::is_renderable)
+            .collect();
 
         Self {
             kind,
@@ -61,6 +65,10 @@ impl TextComponent {
         }
     }
 
+    /// # Panics
+    ///
+    /// Panics if content height exceeds u16 (impossible since bounded by terminal height).
+    #[must_use]
     pub fn new_formatted(kind: TextNode, content: Vec<Vec<Word>>) -> Self {
         let meta_info: Vec<Word> = content
             .iter()
@@ -71,12 +79,19 @@ impl TextComponent {
 
         let content = content
             .into_iter()
-            .map(|c| c.into_iter().filter(|c| c.is_renderable()).collect())
+            .map(|c| {
+                c.into_iter()
+                    .filter(super::word::Word::is_renderable)
+                    .collect()
+            })
             .collect::<Vec<Vec<Word>>>();
 
         Self {
             kind,
-            height: content.len() as u16,
+            height: content
+                .len()
+                .try_into()
+                .expect("content lines fit in terminal height"),
             meta_info,
             content,
             offset: 0,
@@ -86,14 +101,17 @@ impl TextComponent {
         }
     }
 
+    #[must_use]
     pub fn kind(&self) -> TextNode {
         self.kind.clone()
     }
 
+    #[must_use]
     pub fn content(&self) -> &Vec<Vec<Word>> {
         &self.content
     }
 
+    #[must_use]
     pub fn content_as_lines(&self) -> Vec<String> {
         if let TextNode::Table(widths, _) = self.kind() {
             let column_count = widths.len();
@@ -102,51 +120,60 @@ impl TextComponent {
 
             let mut lines = Vec::new();
 
-            moved_content.iter().for_each(|line| {
+            for line in &moved_content {
                 let noe = line
                     .iter()
-                    .map(|c| c.iter().map(|word| word.content()).join(""))
+                    .map(|c| c.iter().map(super::word::Word::content).join(""))
                     .join(" ");
                 lines.push(noe);
-            });
+            }
 
             lines
         } else {
             self.content
                 .iter()
-                .map(|c| c.iter().map(|c| c.content()).collect::<Vec<_>>().join(""))
+                .map(|c| {
+                    c.iter()
+                        .map(super::word::Word::content)
+                        .collect::<Vec<_>>()
+                        .join("")
+                })
                 .collect()
         }
     }
 
+    #[must_use]
     pub fn content_as_bytes(&self) -> Vec<u8> {
-        match self.kind() {
-            TextNode::CodeBlock => self.content_as_lines().join("").as_bytes().to_vec(),
-
-            _ => {
-                let strings = self.content_as_lines();
-                let string = strings.join("\n");
-                string.as_bytes().to_vec()
-            }
+        if self.kind() == TextNode::CodeBlock {
+            self.content_as_lines().join("").as_bytes().to_vec()
+        } else {
+            let strings = self.content_as_lines();
+            let string = strings.join("\n");
+            string.as_bytes().to_vec()
         }
     }
 
+    #[must_use]
     pub fn content_owned(self) -> Vec<Vec<Word>> {
         self.content
     }
 
+    #[must_use]
     pub fn meta_info(&self) -> &Vec<Word> {
         &self.meta_info
     }
 
+    #[must_use]
     pub fn height(&self) -> u16 {
         self.height
     }
 
+    #[must_use]
     pub fn y_offset(&self) -> u16 {
         self.offset
     }
 
+    #[must_use]
     pub fn scroll_offset(&self) -> u16 {
         self.scroll_offset
     }
@@ -159,6 +186,7 @@ impl TextComponent {
         self.scroll_offset = offset;
     }
 
+    #[must_use]
     pub fn is_focused(&self) -> bool {
         self.focused
     }
@@ -175,6 +203,8 @@ impl TextComponent {
             });
     }
 
+    /// # Errors
+    /// Returns an error if the index is out of bounds.
     pub fn visually_select(&mut self, index: usize) -> Result<(), String> {
         self.focused = true;
         self.focused_index = index;
@@ -215,6 +245,8 @@ impl TextComponent {
         selection
     }
 
+    /// # Errors
+    /// Returns an error if no link is focused.
     pub fn highlight_link(&self) -> Result<&str, String> {
         Ok(self
             .meta_info()
@@ -225,6 +257,7 @@ impl TextComponent {
             .content())
     }
 
+    #[must_use]
     pub fn num_links(&self) -> usize {
         self.meta_info
             .iter()
@@ -232,6 +265,7 @@ impl TextComponent {
             .count()
     }
 
+    #[must_use]
     pub fn selected_heights(&self) -> Vec<usize> {
         let mut heights = Vec::new();
 
@@ -264,7 +298,9 @@ impl TextComponent {
 
     pub fn transform(&mut self, width: u16) {
         match self.kind {
-            TextNode::Heading => self.height = 1,
+            TextNode::Heading | TextNode::LineBreak | TextNode::HorizontalSeperator => {
+                self.height = 1;
+            }
             TextNode::List => {
                 transform_list(self, width);
             }
@@ -274,13 +310,9 @@ impl TextComponent {
             TextNode::Paragraph | TextNode::Task | TextNode::Quote => {
                 transform_paragraph(self, width);
             }
-            TextNode::LineBreak => {
-                self.height = 1;
-            }
             TextNode::Table(_, _) => {
                 transform_table(self, width);
             }
-            TextNode::HorizontalSeperator => self.height = 1,
             TextNode::Image => unreachable!("Image should not be transformed"),
         }
     }
@@ -324,7 +356,7 @@ fn word_wrapping<'a>(
                 .map(|(_index, character)| character)
                 .collect();
 
-            if enable_hyphen && !content.ends_with("-") {
+            if enable_hyphen && !content.ends_with('-') {
                 newline_content.insert(0, content.pop().unwrap());
                 content.push('-');
             }
@@ -338,7 +370,7 @@ fn word_wrapping<'a>(
                     .skip(width - 1)
                     .map(|(_index, character)| character)
                     .collect();
-                if enable_hyphen && !newline_content.ends_with("-") {
+                if enable_hyphen && !newline_content.ends_with('-') {
                     next_newline_content.insert(0, newline_content.pop().unwrap());
                     newline_content.push('-');
                 }
@@ -346,15 +378,15 @@ fn word_wrapping<'a>(
                 line = vec![Word::new(newline_content, word.kind())];
                 lines.push(line);
 
-                newline_content = next_newline_content
+                newline_content = next_newline_content;
             }
 
-            if !newline_content.is_empty() {
-                line_len = newline_content.len();
-                line = vec![Word::new(newline_content, word.kind())];
-            } else {
+            if newline_content.is_empty() {
                 line_len = 0;
                 line = Vec::new();
+            } else {
+                line_len = newline_content.len();
+                line = vec![Word::new(newline_content, word.kind())];
             }
         }
     }
@@ -368,9 +400,9 @@ fn word_wrapping<'a>(
 
 fn transform_paragraph(component: &mut TextComponent, width: u16) {
     let width = match component.kind {
-        TextNode::Paragraph => width as usize - 1,
-        TextNode::Task => width as usize - 4,
-        TextNode::Quote => width as usize - 2,
+        TextNode::Paragraph => usize::from(width) - 1,
+        TextNode::Task => usize::from(width) - 4,
+        TextNode::Quote => usize::from(width) - 2,
         _ => unreachable!(),
     };
 
@@ -379,12 +411,15 @@ fn transform_paragraph(component: &mut TextComponent, width: u16) {
     if component.kind() == TextNode::Quote {
         let is_special_quote = !component.meta_info.is_empty();
 
-        for line in lines.iter_mut().skip(if is_special_quote { 1 } else { 0 }) {
+        for line in lines.iter_mut().skip(usize::from(is_special_quote)) {
             line.insert(0, Word::new(" ".to_string(), WordType::Normal));
         }
     }
 
-    component.height = lines.len() as u16;
+    component.height = lines
+        .len()
+        .try_into()
+        .expect("line count fits in terminal height");
     component.content = lines;
 }
 
@@ -404,7 +439,7 @@ fn transform_codeblock(component: &mut TextComponent) {
     if language.is_empty() {
         component.content.insert(
             0,
-            vec![Word::new("".to_string(), WordType::CodeBlock(Color::Reset))],
+            vec![Word::new(String::new(), WordType::CodeBlock(Color::Reset))],
         );
     }
     match highlight {
@@ -428,9 +463,7 @@ fn transform_codeblock(component: &mut TextComponent) {
             let mut final_content = Vec::new();
             let mut inner_content = Vec::new();
             for word in new_content {
-                if !word.content().contains('\n') {
-                    inner_content.push(word);
-                } else {
+                if word.content().contains('\n') {
                     let mut start = 0;
                     let mut end;
                     for (i, c) in word.content().char_indices() {
@@ -448,20 +481,29 @@ fn transform_codeblock(component: &mut TextComponent) {
                             inner_content.push(new_word);
                         }
                     }
+                } else {
+                    inner_content.push(word);
                 }
             }
 
-            final_content.push(vec![Word::new("".to_string(), WordType::CodeBlock(color))]);
+            final_content.push(vec![Word::new(String::new(), WordType::CodeBlock(color))]);
 
             component.content = final_content;
         }
         HighlightInfo::Unhighlighted => (),
     }
 
-    let height = component.content.len() as u16;
-    component.height = height;
+    component.height = component
+        .content
+        .len()
+        .try_into()
+        .expect("code block height fits in terminal");
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "splitting would require passing many intermediate state values between functions"
+)]
 fn transform_list(component: &mut TextComponent, width: u16) {
     let mut len = 0;
     let mut lines = Vec::new();
@@ -473,7 +515,7 @@ fn transform_list(component: &mut TextComponent, width: u16) {
     let list_type_iter = component.meta_info.iter().filter(|c| {
         matches!(
             c.kind(),
-            WordType::MetaInfo(MetaData::OList) | WordType::MetaInfo(MetaData::UList)
+            WordType::MetaInfo(MetaData::OList | MetaData::UList)
         )
     });
 
@@ -485,7 +527,7 @@ fn transform_list(component: &mut TextComponent, width: u16) {
     let mut extra_indent = 0;
     let mut tmp = indent;
     for word in component.content.iter_mut().flatten() {
-        if word.content().len() + len < width as usize && word.kind() != WordType::ListMarker {
+        if word.content().len() + len < usize::from(width) && word.kind() != WordType::ListMarker {
             len += word.content().len();
             line.push(word.clone());
         } else {
@@ -544,7 +586,7 @@ fn transform_list(component: &mut TextComponent, width: u16) {
     let mut indent_index: u32 = 0;
     let mut indent_len = 0;
 
-    for line in lines.iter() {
+    for line in &lines {
         if !line[1]
             .content()
             .strip_prefix(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
@@ -565,10 +607,10 @@ fn transform_list(component: &mut TextComponent, width: u16) {
             cmp::Ordering::Equal => (),
         }
 
-        indent_correction[indent_index as usize] = cmp::max(
-            indent_correction[indent_index as usize],
-            line[1].content().len(),
-        );
+        let idx: usize = indent_index
+            .try_into()
+            .expect("indent index fits in usize");
+        indent_correction[idx] = cmp::max(indent_correction[idx], line[1].content().len());
     }
 
     // Finally, apply the indent correction to the list for each ordered index which is shorter
@@ -578,7 +620,7 @@ fn transform_list(component: &mut TextComponent, width: u16) {
     indent_len = 0;
     let mut unordered_list_skip = true; // Skip unordered list items. They are already aligned.
 
-    for line in lines.iter_mut() {
+    for line in &mut lines {
         if line[1]
             .content()
             .strip_prefix(['1', '2', '3', '4', '5', '6', '7', '8', '9'])
@@ -608,20 +650,33 @@ fn transform_list(component: &mut TextComponent, width: u16) {
                 }
                 cmp::Ordering::Equal => (),
             }
-            indent_correction[indent_index as usize].saturating_sub(line[1].content().len())
+            let idx: usize = indent_index
+                .try_into()
+                .expect("indent index fits in usize");
+            indent_correction[idx].saturating_sub(line[1].content().len())
                 + line[0].content().len()
         } else {
             // -3 because that is the length of the shortest ordered index (1. )
-            (indent_correction[indent_index as usize] + line[0].content().len()).saturating_sub(3)
+            let idx: usize = indent_index
+                .try_into()
+                .expect("indent index fits in usize");
+            (indent_correction[idx] + line[0].content().len()).saturating_sub(3)
         };
 
         line[0].set_content(" ".repeat(amount));
     }
 
-    component.height = lines.len() as u16;
+    component.height = lines
+        .len()
+        .try_into()
+        .expect("list height fits in terminal");
     component.content = lines;
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "table transformation involves multiple coordinated phases that share state"
+)]
 fn transform_table(component: &mut TextComponent, width: u16) {
     let content = &mut component.content;
 
@@ -650,12 +705,12 @@ fn transform_table(component: &mut TextComponent, width: u16) {
     // Find unbalanced width //
     ///////////////////////////
     let widths = {
-        let mut widths = vec![0; column_count];
+        let mut widths = vec![0u16; column_count];
         content.chunks(column_count).for_each(|row| {
             row.iter().enumerate().for_each(|(col_i, entry)| {
                 let len = content_entry_len(entry);
-                if len > widths[col_i] as usize {
-                    widths[col_i] = len as u16;
+                if len > usize::from(widths[col_i]) {
+                    widths[col_i] = len.try_into().expect("cell width fits in u16");
                 }
             });
         });
@@ -663,22 +718,25 @@ fn transform_table(component: &mut TextComponent, width: u16) {
         widths
     };
 
-    let styling_width = column_count as u16;
+    let styling_width: u16 = column_count.try_into().expect("column count fits in u16");
     let unbalanced_cells_width = widths.iter().sum::<u16>();
 
     /////////////////////////////////////
     // Return if unbalanced width fits //
     /////////////////////////////////////
     if width >= unbalanced_cells_width + styling_width {
-        component.height = (content.len() / column_count) as u16;
-        component.kind = TextNode::Table(widths, vec![1; component.height as usize]);
+        component.height = (content.len() / column_count)
+            .try_into()
+            .expect("table row count fits in u16");
+        component.kind = TextNode::Table(widths, vec![1; usize::from(component.height)]);
         return;
     }
 
     //////////////////////////////
     // Find overflowing columns //
     //////////////////////////////
-    let overflow_threshold = (width - styling_width) / column_count as u16;
+    let column_count_u16: u16 = column_count.try_into().expect("column count fits in u16");
+    let overflow_threshold = (width - styling_width) / column_count_u16;
     let mut overflowing_columns = vec![];
 
     let (overflowing_width, non_overflowing_width) = {
@@ -709,8 +767,11 @@ fn transform_table(component: &mut TextComponent, width: u16) {
     let mut available_balanced_width = width - non_overflowing_width - styling_width;
     let mut available_overflowing_width = overflowing_width;
 
-    let overflowing_column_min_width =
-        (available_balanced_width / (2 * overflowing_columns.len() as u16)).max(1);
+    let overflowing_len_u16: u16 = overflowing_columns
+        .len()
+        .try_into()
+        .expect("overflowing column count fits in u16");
+    let overflowing_column_min_width = (available_balanced_width / (2 * overflowing_len_u16)).max(1);
 
     let mut widths_balanced: Vec<u16> = widths.clone();
     for (column_i, old_column_width) in overflowing_columns
@@ -720,8 +781,17 @@ fn transform_table(component: &mut TextComponent, width: u16) {
         .sorted_by(|a, b| Ord::cmp(a.1, b.1))
     {
         // Ensure the longest cell gets the most amount of area
-        let ratio = (**old_column_width as f32) / (available_overflowing_width as f32);
-        let mut balanced_column_width = (ratio * available_balanced_width as f32).floor() as u16;
+        let ratio = f32::from(**old_column_width) / f32::from(available_overflowing_width);
+        let balanced_width_f32 = (ratio * f32::from(available_balanced_width)).floor();
+        // SAFETY: ratio is always positive (positive/positive), so result is non-negative
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "balanced_width_f32 is always non-negative and fits in u16"
+        )]
+        let mut balanced_column_width: u16 = (balanced_width_f32 as u32)
+            .try_into()
+            .expect("balanced column width fits in u16");
 
         if balanced_column_width < overflowing_column_min_width {
             balanced_column_width = overflowing_column_min_width;
@@ -735,7 +805,7 @@ fn transform_table(component: &mut TextComponent, width: u16) {
     ////////////////////////////////////////
     // Wrap words based on balanced width //
     ////////////////////////////////////////
-    let mut heights = vec![1; row_count];
+    let mut heights: Vec<u16> = vec![1; row_count];
     for (row_i, row) in content
         .iter_mut()
         .chunks(column_count)
@@ -745,23 +815,25 @@ fn transform_table(component: &mut TextComponent, width: u16) {
         for (column_i, entry) in row.into_iter().enumerate() {
             let lines = word_wrapping(
                 entry.drain(..).as_ref(),
-                widths_balanced[column_i] as usize,
+                usize::from(widths_balanced[column_i]),
                 true,
             );
 
-            if heights[row_i] < lines.len() as u16 {
-                heights[row_i] = lines.len() as u16;
+            let lines_len: u16 = lines.len().try_into().expect("cell height fits in u16");
+            if heights[row_i] < lines_len {
+                heights[row_i] = lines_len;
             }
 
             let _drop = std::mem::replace(entry, lines.into_iter().flatten().collect());
         }
     }
 
-    component.height = heights.iter().cloned().sum::<u16>();
+    component.height = heights.iter().copied().sum::<u16>();
 
     component.kind = TextNode::Table(widths_balanced, heights);
 }
 
+#[must_use]
 pub fn content_entry_len(words: &[Word]) -> usize {
     words.iter().map(|word| word.content().len()).sum()
 }

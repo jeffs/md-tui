@@ -18,6 +18,10 @@ use crate::nodes::{
 #[grammar = "md.pest"]
 pub struct MdParser;
 
+/// # Panics
+///
+/// Panics if the parsed markdown text has no root element.
+#[must_use]
 pub fn parse_markdown(name: Option<&str>, content: &str, width: u16) -> ComponentRoot {
     let root: Pairs<'_, Rule> = if let Ok(file) = MdParser::parse(Rule::txt, content) {
         file
@@ -38,10 +42,10 @@ pub fn parse_markdown(name: Option<&str>, content: &str, width: u16) -> Componen
 }
 
 fn parse_text(pair: Pair<'_, Rule>) -> ParseNode {
-    let content = if pair.as_rule() != Rule::code_line {
-        pair.as_str().replace('\n', " ")
-    } else {
+    let content = if pair.as_rule() == Rule::code_line {
         pair.as_str().replace('\t', "    ").replace('\r', "")
+    } else {
+        pair.as_str().replace('\n', " ")
     };
     let mut component = ParseNode::new(pair.as_rule().into(), content);
     let children = parse_node_children(pair.into_inner());
@@ -59,7 +63,7 @@ fn parse_node_children(pair: Pairs<'_, Rule>) -> Vec<ParseNode> {
 
 fn node_to_component(root: ParseRoot) -> ComponentRoot {
     let mut children = Vec::new();
-    let name = root.file_name().to_owned();
+    let name = root.file_name().clone();
     for component in root.children_owned() {
         let comp = parse_component(component);
         children.push(comp);
@@ -72,6 +76,10 @@ fn is_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://")
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "match must handle all Rule variants in one place for exhaustiveness checking"
+)]
 fn parse_component(parse_node: ParseNode) -> Component {
     match parse_node.kind() {
         MdParseEnum::Image => {
@@ -107,7 +115,7 @@ fn parse_component(parse_node: ParseNode) -> Component {
             if let Some(img) = image.as_ref() {
                 let height = img.height();
 
-                let comp = ImageComponent::new(img.to_owned(), height, alt_text.clone());
+                let comp = ImageComponent::new(img.to_owned(), height, &alt_text);
 
                 if let Some(comp) = comp {
                     Component::Image(comp)
@@ -195,9 +203,12 @@ fn parse_component(parse_node: ParseNode) -> Component {
             let leaf_nodes = get_leaf_nodes(parse_node);
             let mut words = Vec::new();
 
+            let indent_u8: u8 = indent
+                .try_into()
+                .expect("heading level bounded by markdown spec (1-6)");
             words.push(Word::new(
-                "".to_string(),
-                WordType::MetaInfo(MetaData::HeadingLevel(indent as u8)),
+                String::new(),
+                WordType::MetaInfo(MetaData::HeadingLevel(indent_u8)),
             ));
 
             if indent > 1 {
@@ -388,7 +399,7 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
         let comp = if node.content().starts_with(' ') {
             ParseNode::new(MdParseEnum::Word, " ".to_owned())
         } else {
-            ParseNode::new(MdParseEnum::Word, "".to_owned())
+            ParseNode::new(MdParseEnum::Word, String::new())
         };
         leaf_nodes.push(comp);
     }
@@ -429,14 +440,14 @@ fn print_component(component: &TextComponent, _depth: usize) {
         component.height(),
         component.y_offset()
     );
-    component.meta_info().iter().for_each(|w| {
+    for w in component.meta_info() {
         println!("Meta: {}, kind: {:?}", w.content(), w.kind());
-    });
-    component.content().iter().for_each(|w| {
-        w.iter().for_each(|w| {
+    }
+    for row in component.content() {
+        for w in row {
             println!("Content:{}, kind: {:?}", w.content(), w.kind());
-        });
-    });
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -446,6 +457,7 @@ pub struct ParseRoot {
 }
 
 impl ParseRoot {
+    #[must_use]
     pub fn new(file_name: Option<String>, children: Vec<ParseNode>) -> Self {
         Self {
             file_name,
@@ -453,16 +465,19 @@ impl ParseRoot {
         }
     }
 
+    #[must_use]
     pub fn children(&self) -> &Vec<ParseNode> {
         &self.children
     }
 
+    #[must_use]
     pub fn children_owned(self) -> Vec<ParseNode> {
         self.children
     }
 
+    #[must_use]
     pub fn file_name(&self) -> Option<String> {
-        self.file_name.to_owned()
+        self.file_name.clone()
     }
 }
 
@@ -474,6 +489,7 @@ pub struct ParseNode {
 }
 
 impl ParseNode {
+    #[must_use]
     pub fn new(kind: MdParseEnum, content: String) -> Self {
         Self {
             kind,
@@ -482,10 +498,12 @@ impl ParseNode {
         }
     }
 
+    #[must_use]
     pub fn kind(&self) -> MdParseEnum {
         self.kind
     }
 
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -494,10 +512,12 @@ impl ParseNode {
         self.children.extend(children);
     }
 
+    #[must_use]
     pub fn children(&self) -> &Vec<ParseNode> {
         &self.children
     }
 
+    #[must_use]
     pub fn children_owned(self) -> Vec<ParseNode> {
         self.children
     }
@@ -585,7 +605,6 @@ impl From<Rule> for MdParseEnum {
                 Self::Heading
             }
             Rule::list_container => Self::ListContainer,
-            Rule::paragraph => Self::Paragraph,
             Rule::code_block | Rule::indented_code_block => Self::CodeBlock,
             Rule::table => Self::Table,
             Rule::quote => Self::Quote,
@@ -600,7 +619,8 @@ impl From<Rule> for MdParseEnum {
             Rule::important => Self::Imortant,
             Rule::caution => Self::Caution,
 
-            Rule::p_char
+            Rule::paragraph
+            | Rule::p_char
             | Rule::t_char
             | Rule::link_char
             | Rule::wiki_link_char

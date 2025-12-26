@@ -1,10 +1,9 @@
 use std::{
     str::FromStr,
-    sync::{Arc, RwLock},
+    sync::{Arc, LazyLock, RwLock},
 };
 
 use config::{Config, Environment, File};
-use lazy_static::lazy_static;
 use ratatui::style::Color;
 
 #[derive(Debug, Clone, Copy)]
@@ -43,6 +42,14 @@ pub struct ColorConfig {
     pub quote_default: Color,
 }
 
+/// # Panics
+///
+/// Panics if home directory cannot be determined.
+#[must_use]
+#[expect(
+    clippy::too_many_lines,
+    reason = "each color field follows the same pattern; extracting would add indirection without improving clarity"
+)]
 pub fn read_color_config_from_file() -> ColorConfig {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir.join(".config").join("mdt").join("config.toml");
@@ -174,16 +181,20 @@ pub fn read_color_config_from_file() -> ColorConfig {
     }
 }
 
-lazy_static! {
-    static ref COLOR_CONFIG_INTERNAL: Arc<RwLock<ColorConfig>> =
-        RwLock::new(read_color_config_from_file()).into();
-}
+static COLOR_CONFIG_INTERNAL: LazyLock<Arc<RwLock<ColorConfig>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(read_color_config_from_file())));
 
+/// # Panics
+///
+/// Panics if the lock is poisoned.
 pub fn set_color_config(config: ColorConfig) {
     let mut color_config_internal = COLOR_CONFIG_INTERNAL.write().unwrap();
     *color_config_internal = config;
 }
 
+/// # Panics
+///
+/// Panics if the lock is poisoned.
 #[must_use]
 pub fn color_config() -> ColorConfig {
     *COLOR_CONFIG_INTERNAL.read().unwrap()
@@ -198,6 +209,10 @@ pub struct HeadingColors {
     pub level_6: Color,
 }
 
+/// # Panics
+///
+/// Panics if home directory cannot be determined.
+#[must_use]
 pub fn read_heading_colors_from_file() -> HeadingColors {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir.join(".config").join("mdt").join("config.toml");
@@ -230,16 +245,20 @@ pub fn read_heading_colors_from_file() -> HeadingColors {
     }
 }
 
-lazy_static! {
-    static ref HEADING_COLORS_INTERNAL: Arc<RwLock<HeadingColors>> =
-        RwLock::new(read_heading_colors_from_file()).into();
-}
+static HEADING_COLORS_INTERNAL: LazyLock<Arc<RwLock<HeadingColors>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(read_heading_colors_from_file())));
 
+/// # Panics
+///
+/// Panics if the lock is poisoned.
 pub fn set_heading_colors(config: HeadingColors) {
     let mut heading_colors_internal = HEADING_COLORS_INTERNAL.write().unwrap();
     *heading_colors_internal = config;
 }
 
+/// # Panics
+///
+/// Panics if the lock is poisoned.
 #[must_use]
 pub fn heading_colors() -> HeadingColors {
     *HEADING_COLORS_INTERNAL.read().unwrap()

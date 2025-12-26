@@ -93,19 +93,21 @@ impl From<MdParseEnum> for WordType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Word {
     content: String,
-    word_type: WordType,
-    previous_type: Option<WordType>,
+    kind: WordType,
+    previous_kind: Option<WordType>,
 }
 
 impl Word {
-    pub fn new(content: String, word_type: WordType) -> Self {
+    #[must_use]
+    pub fn new(content: String, kind: WordType) -> Self {
         Self {
-            word_type,
-            previous_type: None,
+            kind,
+            previous_kind: None,
             content,
         }
     }
 
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -118,29 +120,32 @@ impl Word {
         self.content = content.into();
     }
 
+    #[must_use]
     pub fn kind(&self) -> WordType {
-        self.word_type
+        self.kind
     }
 
     pub fn set_kind(&mut self, kind: WordType) {
-        self.previous_type = Some(self.word_type);
-        self.word_type = kind;
+        self.previous_kind = Some(self.kind);
+        self.kind = kind;
     }
 
     pub fn clear_kind(&mut self) {
-        self.word_type = self.previous_type.unwrap_or(self.word_type);
-        self.previous_type = None;
+        self.kind = self.previous_kind.unwrap_or(self.kind);
+        self.previous_kind = None;
     }
 
+    #[must_use]
     pub fn is_renderable(&self) -> bool {
         !matches!(self.kind(), WordType::MetaInfo(_) | WordType::LinkData)
     }
 
+    #[must_use]
     pub fn split_off(&mut self, at: usize) -> Word {
         Word {
             content: self.content.split_off(at),
-            word_type: self.word_type,
-            previous_type: self.previous_type,
+            kind: self.kind,
+            previous_kind: self.previous_kind,
         }
     }
 }

@@ -1,6 +1,5 @@
 use std::{
     cmp, env,
-    error::Error,
     fs::read_to_string,
     io::{self, IsTerminal, Read},
     panic,
@@ -34,7 +33,7 @@ use ratatui_image::{FilterType, Resize, StatefulImage};
 
 const EMPTY_FILE: &str = "";
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     // Set up panic handler. If not set up, the terminal will be left in a broken state if a panic
     // occurs
     panic::set_hook(Box::new(|panic_info| {
@@ -55,10 +54,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     if let Err(err) = res {
         println!("{err:?}");
     }
-
-    Ok(())
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "event loop must coordinate terminal, file watcher, and UI state in one place"
+)]
 fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -99,7 +100,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                 app.mode = Mode::View;
             } else {
                 app.error_box
-                    .set_message(format!("Could not open file {:?}", arg));
+                    .set_message(format!("Could not open file {arg:?}"));
                 app.boxes = Boxes::Error;
             }
         }
@@ -136,9 +137,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             }
         }
         if app.set_width(terminal.size()?.width) {
-            let url = if let Some(url) = markdown.file_name() {
-                url
-            } else {
+            let Some(url) = markdown.file_name() else {
                 app.mode = Mode::FileTree;
                 continue;
             };
@@ -165,20 +164,17 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                 Mode::FileTree => {
                     if !file_tree.loaded() {
                         while let Ok(e) = f_rx.try_recv() {
-                            match e {
-                                Some(file) => {
-                                    file_tree.add_file(file);
-                                }
-                                None => {
-                                    file_tree = file_tree.clone().finish();
-                                    break;
-                                }
+                            if let Some(file) = e {
+                                file_tree.add_file(file);
+                            } else {
+                                file_tree = file_tree.clone().finish();
+                                break;
                             }
                         }
                     }
                     render_file_tree(f, &app, file_tree.clone());
                 }
-            };
+            }
             if app.boxes == Boxes::Search {
                 let (search_height, search_width) = app.search_box.dimensions();
                 let search_area = Rect {
@@ -219,25 +215,25 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                match handle_keyboard_input(
-                    key,
-                    &mut app,
-                    &mut markdown,
-                    &mut file_tree,
-                    height,
-                    &mut watcher,
-                ) {
-                    KeyBoardAction::Exit => {
-                        return Ok(());
-                    }
-                    KeyBoardAction::Continue => {}
-                    KeyBoardAction::Edit => {
-                        terminal.draw(|f| {
-                            open_editor(f, &mut app, markdown.file_name());
-                        })?;
-                    }
+        if event::poll(timeout)?
+            && let Event::Key(key) = event::read()?
+        {
+            match handle_keyboard_input(
+                key,
+                &mut app,
+                &mut markdown,
+                &mut file_tree,
+                height,
+                &mut watcher,
+            ) {
+                KeyBoardAction::Exit => {
+                    return Ok(());
+                }
+                KeyBoardAction::Continue => {}
+                KeyBoardAction::Edit => {
+                    terminal.draw(|f| {
+                        open_editor(f, &mut app, markdown.file_name());
+                    })?;
                 }
             }
         }
@@ -349,7 +345,7 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
                     continue;
                 }
 
-                f.render_widget(comp.clone(), area)
+                f.render_widget(comp.clone(), area);
             }
             Component::Image(img) => {
                 if img.y_offset().saturating_sub(img.scroll_offset()) >= area.height
@@ -381,7 +377,7 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
                     height,
                 );
 
-                f.render_stateful_widget(image, inner_area, img.image_mut())
+                f.render_stateful_widget(image, inner_area, img.image_mut());
             }
         }
     }
@@ -393,17 +389,17 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
 
     // Render a block at the bottom to show the current mode
     let block = Block::default().bg(Color::Black);
-    let area = if !app.help_box.expanded() {
+    let area = if app.help_box.expanded() {
         Rect {
-            y: size.height - 4,
-            height: 3,
+            y: size.height - 19,
+            height: 18,
             x,
             ..area
         }
     } else {
         Rect {
-            y: size.height - 19,
-            height: 18,
+            y: size.height - 4,
+            height: 3,
             x,
             ..area
         }
@@ -429,23 +425,19 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
     };
 
     if app.boxes != Boxes::Search {
-        f.render_widget(app.help_box, area)
+        f.render_widget(app.help_box, area);
     }
 }
 
 fn open_editor(f: &mut Frame, app: &mut App, file_name: Option<&str>) {
-    let editor = if let Ok(editor) = env::var("EDITOR") {
-        editor
-    } else {
+    let Ok(editor) = env::var("EDITOR") else {
         app.error_box
             .set_message("No editor found. Please set the EDITOR environment variable".to_owned());
         app.boxes = Boxes::Error;
         return;
     };
 
-    let file_name = if let Some(file_name) = file_name {
-        file_name
-    } else {
+    let Some(file_name) = file_name else {
         app.error_box
             .set_message("No file found to open in editor".to_owned());
         app.boxes = Boxes::Error;

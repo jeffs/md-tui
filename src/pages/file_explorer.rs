@@ -28,18 +28,22 @@ pub struct MdFile {
 }
 
 impl MdFile {
+    #[must_use]
     pub fn new(path: String, name: String) -> Self {
         Self { path, name }
     }
 
+    #[must_use]
     pub fn path_str(&self) -> &str {
         &self.path
     }
 
+    #[must_use]
     pub fn path(&self) -> &Path {
         Path::new(&self.path)
     }
 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -49,9 +53,9 @@ impl From<MdFile> for ListItem<'_> {
     fn from(val: MdFile) -> Self {
         let mut text = Text::default();
         text.extend([
-            val.name.to_owned().fg(color_config().file_tree_name_color),
+            val.name.clone().fg(color_config().file_tree_name_color),
             val.path
-                .to_owned()
+                .clone()
                 .italic()
                 .fg(color_config().file_tree_path_color),
         ]);
@@ -79,6 +83,7 @@ pub struct FileTree {
 }
 
 impl FileTree {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             all_files: Vec::new(),
@@ -90,10 +95,12 @@ impl FileTree {
         }
     }
 
+    #[must_use]
     pub fn loaded(&self) -> bool {
         self.loaded
     }
 
+    #[must_use]
     pub fn finish(self) -> Self {
         let mut this = self;
         this.loaded = true;
@@ -120,6 +127,8 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
+    /// # Panics
+    /// Panics if file path cannot be converted to string.
     pub fn sort_name(&mut self) {
         // Separate files and spacers into two vectors
         let (mut files, mut spacers): (Vec<_>, Vec<_>) = self
@@ -162,7 +171,7 @@ impl FileTree {
     pub fn search(&mut self, query: Option<&str>) {
         self.state_mut().select(None);
         self.page = 0;
-        self.search = query.map(|s| s.to_owned());
+        self.search = query.map(std::borrow::ToOwned::to_owned);
         match query {
             Some(query) => {
                 self.files = find_files(&self.all_files, query)
@@ -193,6 +202,9 @@ impl FileTree {
             .collect::<Vec<_>>();
     }
 
+    /// # Panics
+    ///
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn next(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -204,10 +216,15 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / self.partition(height)) as u32;
+        self.page = (i / partition(height))
+            .try_into()
+            .expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
+    /// # Panics
+    ///
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn previous(&mut self, height: u16) {
         let i = match self.list_state.selected() {
             Some(i) => {
@@ -219,12 +236,17 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / self.partition(height)) as u32;
+        self.page = (i / partition(height))
+            .try_into()
+            .expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
+    /// # Panics
+    ///
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn next_page(&mut self, height: u16) {
-        let partition = self.partition(height);
+        let partition = partition(height);
         let i = match self.list_state.selected() {
             Some(i) => {
                 if i + partition >= self.files.len() {
@@ -235,12 +257,15 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / partition) as u32;
+        self.page = (i / partition).try_into().expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
+    /// # Panics
+    ///
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn previous_page(&mut self, height: u16) {
-        let partition = self.partition(height);
+        let partition = partition(height);
         let i = match self.list_state.selected() {
             Some(i) => {
                 if i < partition {
@@ -251,7 +276,7 @@ impl FileTree {
             }
             None => 0,
         };
-        self.page = (i / partition) as u32;
+        self.page = (i / partition).try_into().expect("page count fits in u32");
         self.list_state.select(Some(i));
     }
 
@@ -260,17 +285,21 @@ impl FileTree {
         self.page = 0;
     }
 
+    /// # Panics
+    ///
+    /// Panics if page count exceeds u32 (impossible for realistic file counts).
     pub fn last(&mut self, height: u16) {
-        let partition = self.partition(height);
+        let partition = partition(height);
         let i = self.files.len() - 2;
         self.list_state.select(Some(i));
-        self.page = (i / partition) as u32;
+        self.page = (i / partition).try_into().expect("page count fits in u32");
     }
 
     pub fn unselect(&mut self) {
         self.list_state.select(None);
     }
 
+    #[must_use]
     pub fn selected(&self) -> Option<&MdFile> {
         match self.list_state.selected() {
             Some(i) => self.files.get(i).and_then(|f| match f {
@@ -287,6 +316,7 @@ impl FileTree {
         self.files.push(MdFileComponent::Spacer);
     }
 
+    #[must_use]
     pub fn files(&self) -> Vec<&MdFile> {
         self.files
             .iter()
@@ -297,27 +327,20 @@ impl FileTree {
             .collect::<Vec<&MdFile>>()
     }
 
+    #[must_use]
     pub fn all_files(&self) -> &Vec<MdFile> {
         &self.all_files
     }
 
-    fn partition(&self, height: u16) -> usize {
-        let partition_size = (height as usize + 2) / 2;
-
-        if partition_size % 2 == 0 {
-            partition_size
-        } else {
-            partition_size + 1
-        }
-    }
-
+    #[must_use]
     pub fn state(&self) -> &ListState {
         &self.list_state
     }
 
+    #[must_use]
     pub fn height(&self, height: u16) -> usize {
         cmp::min(
-            self.partition(height) / 2 * 3,
+            partition(height) / 2 * 3,
             self.files
                 .iter()
                 .filter(|f| matches!(f, MdFileComponent::File(_)))
@@ -331,27 +354,34 @@ impl FileTree {
     }
 }
 
+fn partition(height: u16) -> usize {
+    let partition_size = usize::midpoint(usize::from(height), 2);
+
+    if partition_size.is_multiple_of(2) {
+        partition_size
+    } else {
+        partition_size + 1
+    }
+}
+
 impl Widget for FileTree {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let mut state = self.state().to_owned();
         let file_len = self.files.len();
-        let partition = self.partition(area.height);
+        let part_size = partition(area.height);
 
-        let items = if let Some(iter) = self
-            .files
-            .chunks(self.partition(area.height))
-            .nth(self.page as usize)
-        {
+        let page_index: usize = self.page.try_into().expect("page index fits in usize");
+        let items = if let Some(iter) = self.files.chunks(part_size).nth(page_index) {
             iter.to_owned()
         } else {
             self.files
         };
 
-        state.select(state.selected().map(|i| i % partition));
+        state.select(state.selected().map(|i| i % part_size));
 
         let y_height = items.len() / 2 * 3;
 
-        let total_pages = usize::div_ceil(file_len, partition);
+        let total_pages = usize::div_ceil(file_len, part_size);
 
         let page_count = format!("  {}/{}", self.page + 1, total_pages);
 
@@ -378,8 +408,9 @@ impl Widget for FileTree {
 
         StatefulWidget::render(items, area, buf, &mut state);
 
+        let y_offset: u16 = y_height.try_into().expect("y position fits in terminal height");
         let area = Rect {
-            y: area.y + y_height as u16 + 2,
+            y: area.y + y_offset + 2,
             ..area
         };
 

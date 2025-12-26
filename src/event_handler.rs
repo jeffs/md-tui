@@ -37,6 +37,13 @@ pub fn handle_keyboard_input(
     }
 }
 
+/// # Panics
+///
+/// Panics if file tree height exceeds u16 (impossible in practice since terminals are smaller).
+#[expect(
+    clippy::too_many_lines,
+    reason = "keybinding dispatch must be in one place to see all cases; splitting would scatter related logic"
+)]
 pub fn keyboard_mode_file_tree(
     key: KeyEvent,
     app: &mut App,
@@ -67,8 +74,11 @@ pub fn keyboard_mode_file_tree(
             KeyCode::Char(c) => {
                 app.search_box.insert(c);
                 file_tree.search(app.search_box.content());
-                let file_height = file_tree.height(height);
-                app.search_box.set_position(10, file_height as u16 + 2);
+                let file_height: u16 = file_tree
+                    .height(height)
+                    .try_into()
+                    .expect("file tree height fits in terminal");
+                app.search_box.set_position(10, file_height + 2);
             }
 
             KeyCode::Backspace => {
@@ -77,8 +87,11 @@ pub fn keyboard_mode_file_tree(
                 }
                 app.search_box.delete();
                 file_tree.search(app.search_box.content());
-                let file_height = file_tree.height(height);
-                app.search_box.set_position(10, file_height as u16 + 2);
+                let file_height: u16 = file_tree
+                    .height(height)
+                    .try_into()
+                    .expect("file tree height fits in terminal");
+                app.search_box.set_position(10, file_height + 2);
             }
             _ => {}
         },
@@ -108,9 +121,7 @@ pub fn keyboard_mode_file_tree(
             }
 
             Action::Enter => {
-                let file = if let Some(file) = file_tree.selected() {
-                    file
-                } else {
+                let Some(file) = file_tree.selected() else {
                     app.error_box.set_message("No file selected".to_string());
                     app.boxes = Boxes::Error;
                     return KeyBoardAction::Continue;
@@ -132,8 +143,11 @@ pub fn keyboard_mode_file_tree(
                 app.select_index = 0;
             }
             Action::Search => {
-                let file_height = file_tree.height(height);
-                app.search_box.set_position(10, file_height as u16 + 2);
+                let file_height: u16 = file_tree
+                    .height(height)
+                    .try_into()
+                    .expect("file tree height fits in terminal");
+                app.search_box.set_position(10, file_height + 2);
                 app.search_box.set_width(20);
                 app.boxes = Boxes::Search;
                 app.help_box.close();
@@ -146,7 +160,7 @@ pub fn keyboard_mode_file_tree(
                         file
                     } else {
                         app.error_box
-                            .set_message(format!("Could not open file {}", e));
+                            .set_message(format!("Could not open file {e}"));
                         app.boxes = Boxes::Error;
                         return KeyBoardAction::Continue;
                     };
@@ -187,6 +201,10 @@ pub fn keyboard_mode_file_tree(
     KeyBoardAction::Continue
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "keybinding dispatch must be in one place to see all cases; splitting would scatter related logic"
+)]
 fn keyboard_mode_view(
     key: KeyEvent,
     app: &mut App,
@@ -222,13 +240,16 @@ fn keyboard_mode_view(
                     return KeyBoardAction::Continue;
                 }
 
-                let next = heights
-                    .iter()
-                    .find(|row| **row >= (app.vertical_scroll as usize + height as usize / 2));
+                let next = heights.iter().find(|row| {
+                    **row >= usize::from(app.vertical_scroll) + usize::from(height) / 2
+                });
 
                 if let Some(index) = next {
+                    let index_u16: u16 = (*index)
+                        .try_into()
+                        .expect("search result row fits in terminal height");
                     app.vertical_scroll = cmp::min(
-                        (*index as u16).saturating_sub(height / 2),
+                        index_u16.saturating_sub(height / 2),
                         markdown.height().saturating_sub(height / 2),
                     );
                 }
@@ -307,9 +328,9 @@ fn keyboard_mode_view(
                     let link = markdown.selected();
 
                     let message = match LinkType::from(link) {
-                        LinkType::Internal(e) => format!("Internal link: {}", e),
-                        LinkType::External(e) => format!("External link: {}", e),
-                        LinkType::MarkdownFile(e) => format!("Markdown file: {}", e),
+                        LinkType::Internal(e) => format!("Internal link: {e}"),
+                        LinkType::External(e) => format!("External link: {e}"),
+                        LinkType::MarkdownFile(e) => format!("Markdown file: {e}"),
                     };
 
                     app.link_box.set_message(message);
@@ -329,13 +350,9 @@ fn keyboard_mode_view(
                     return KeyBoardAction::Continue;
                 }
 
-                let next = links.iter().min_by_key(|(_, row)| {
-                    if *row > (app.vertical_scroll + height / 3) {
-                        *row - (app.vertical_scroll + height / 3)
-                    } else {
-                        (app.vertical_scroll + height / 3) - *row
-                    }
-                });
+                let next = links
+                    .iter()
+                    .min_by_key(|(_, row)| (*row).abs_diff(app.vertical_scroll + height / 3));
 
                 if let Some((index, _)) = next {
                     app.vertical_scroll = if let Ok(scroll) = markdown.select(*index) {
@@ -398,13 +415,16 @@ fn keyboard_mode_view(
             Action::SearchNext => {
                 let heights = markdown.search_results_heights();
 
-                let next = heights
-                    .iter()
-                    .find(|row| **row > (app.vertical_scroll as usize + height as usize / 2));
+                let next = heights.iter().find(|row| {
+                    **row > usize::from(app.vertical_scroll) + usize::from(height) / 2
+                });
 
                 if let Some(index) = next {
+                    let index_u16: u16 = (*index)
+                        .try_into()
+                        .expect("search result row fits in terminal height");
                     app.vertical_scroll = cmp::min(
-                        (*index as u16).saturating_sub(height / 2),
+                        index_u16.saturating_sub(height / 2),
                         markdown.height().saturating_sub(height / 2),
                     );
                 }
@@ -413,14 +433,16 @@ fn keyboard_mode_view(
             Action::SearchPrevious => {
                 let heights = markdown.search_results_heights();
 
-                let next = heights
-                    .iter()
-                    .rev()
-                    .find(|row| **row < (app.vertical_scroll as usize + height as usize / 2));
+                let next = heights.iter().rev().find(|row| {
+                    **row < usize::from(app.vertical_scroll) + usize::from(height) / 2
+                });
 
                 if let Some(index) = next {
+                    let index_u16: u16 = (*index)
+                        .try_into()
+                        .expect("search result row fits in terminal height");
                     app.vertical_scroll = cmp::min(
-                        (*index as u16).saturating_sub(height / 2),
+                        index_u16.saturating_sub(height / 2),
                         markdown.height().saturating_sub(height / 2),
                     );
                 }
@@ -444,7 +466,7 @@ fn keyboard_mode_view(
                             cmp::min(index, markdown.height().saturating_sub(height / 2))
                         } else {
                             app.error_box
-                                .set_message(format!("Could not find heading {}", heading));
+                                .set_message(format!("Could not find heading {heading}"));
                             app.boxes = Boxes::Error;
                             markdown.deselect();
                             return KeyBoardAction::Continue;
@@ -467,7 +489,10 @@ fn keyboard_mode_view(
                             (url.to_string(), None)
                         };
 
-                        let url = if url.ends_with(".md") {
+                        let url = if std::path::Path::new(&url)
+                            .extension()
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+                        {
                             url
                         } else {
                             format!("{url}.md")
@@ -478,7 +503,7 @@ fn keyboard_mode_view(
                             file
                         } else {
                             app.error_box
-                                .set_message(format!("Could not open file {}", url));
+                                .set_message(format!("Could not open file {url}"));
                             app.boxes = Boxes::Error;
                             return KeyBoardAction::Continue;
                         };
@@ -495,7 +520,7 @@ fn keyboard_mode_view(
                                 cmp::min(index, markdown.height().saturating_sub(height / 2))
                             } else {
                                 app.error_box
-                                    .set_message(format!("Could not find heading {}", heading));
+                                    .set_message(format!("Could not find heading {heading}"));
                                 app.boxes = Boxes::Error;
                                 0
                             }
@@ -518,7 +543,7 @@ fn keyboard_mode_view(
                         file
                     } else {
                         app.error_box
-                            .set_message(format!("Could not open file {}", e));
+                            .set_message(format!("Could not open file {e}"));
                         app.boxes = Boxes::Error;
                         return KeyBoardAction::Continue;
                     };

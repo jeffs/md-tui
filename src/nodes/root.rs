@@ -13,6 +13,7 @@ pub struct ComponentRoot {
 }
 
 impl ComponentRoot {
+    #[must_use]
     pub fn new(file_name: Option<String>, components: Vec<Component>) -> Self {
         Self {
             file_name,
@@ -21,6 +22,7 @@ impl ComponentRoot {
         }
     }
 
+    #[must_use]
     pub fn children(&self) -> Vec<&Component> {
         self.components.iter().collect()
     }
@@ -29,6 +31,7 @@ impl ComponentRoot {
         self.components.iter_mut().collect()
     }
 
+    #[must_use]
     pub fn components(&self) -> Vec<&TextComponent> {
         self.components
             .iter()
@@ -49,10 +52,12 @@ impl ComponentRoot {
             .collect()
     }
 
+    #[must_use]
     pub fn file_name(&self) -> Option<&str> {
         self.file_name.as_deref()
     }
 
+    #[must_use]
     pub fn words(&self) -> Vec<&Word> {
         self.components
             .iter()
@@ -74,9 +79,10 @@ impl ComponentRoot {
             })
             .flat_map(|c| c.words_mut())
             .collect::<Vec<_>>();
-        find_and_mark(search, &mut words)
+        find_and_mark(search, &mut words);
     }
 
+    #[must_use]
     pub fn search_results_heights(&self) -> Vec<usize> {
         self.components
             .iter()
@@ -86,7 +92,9 @@ impl ComponentRoot {
             })
             .flat_map(|c| {
                 let mut heights = c.selected_heights();
-                heights.iter_mut().for_each(|h| *h += c.y_offset() as usize);
+                for h in &mut heights {
+                    *h += usize::from(c.y_offset());
+                }
                 heights
             })
             .collect()
@@ -97,6 +105,8 @@ impl ComponentRoot {
         self.components.clear();
     }
 
+    /// # Errors
+    /// Returns an error if the index is out of bounds.
     pub fn select(&mut self, index: usize) -> Result<u16, String> {
         self.deselect();
         self.is_focused = true;
@@ -112,7 +122,7 @@ impl ComponentRoot {
             }
             count += comp.num_links();
         }
-        Err(format!("Index out of bounds: {} >= {}", index, count))
+        Err(format!("Index out of bounds: {index} >= {count}"))
     }
 
     pub fn deselect(&mut self) {
@@ -125,26 +135,29 @@ impl ComponentRoot {
         }
     }
 
+    /// # Panics
+    ///
+    /// Panics if row index exceeds u16 (impossible since documents are bounded by terminal height).
+    #[must_use]
     pub fn link_index_and_height(&self) -> Vec<(usize, u16)> {
         let mut indexes = Vec::new();
         let mut count = 0;
-        self.components
-            .iter()
-            .filter_map(|f| match f {
-                Component::TextComponent(comp) => Some(comp),
-                Component::Image(_) => None,
-            })
-            .for_each(|comp| {
-                let height = comp.y_offset();
-                comp.content().iter().enumerate().for_each(|(index, row)| {
-                    row.iter().for_each(|c| {
-                        if c.kind() == WordType::Link || c.kind() == WordType::Selected {
-                            indexes.push((count, height + index as u16));
-                            count += 1;
-                        }
-                    })
-                });
-            });
+        for comp in self.components.iter().filter_map(|f| match f {
+            Component::TextComponent(comp) => Some(comp),
+            Component::Image(_) => None,
+        }) {
+            let height = comp.y_offset();
+            for (index, row) in comp.content().iter().enumerate() {
+                for c in row {
+                    if c.kind() == WordType::Link || c.kind() == WordType::Selected {
+                        let index_u16: u16 =
+                            index.try_into().expect("row index fits in terminal height");
+                        indexes.push((count, height + index_u16));
+                        count += 1;
+                    }
+                }
+            }
+        }
 
         indexes
     }
@@ -152,16 +165,18 @@ impl ComponentRoot {
     /// Sets the y offset of the components
     pub fn set_scroll(&mut self, scroll: u16) {
         let mut y_offset = 0;
-        for component in self.components.iter_mut() {
+        for component in &mut self.components {
             component.set_y_offset(y_offset);
             component.set_scroll_offset(scroll);
             y_offset += component.height();
         }
     }
 
+    /// # Errors
+    /// Returns an error if the heading is not found.
     pub fn heading_offset(&self, heading: &str) -> Result<u16, String> {
         let mut y_offset = 0;
-        for component in self.components.iter() {
+        for component in &self.components {
             match component {
                 Component::TextComponent(comp) => {
                     if comp.kind() == TextNode::Heading
@@ -174,10 +189,11 @@ impl ComponentRoot {
                 Component::Image(e) => y_offset += e.height(),
             }
         }
-        Err(format!("Heading not found: {}", heading))
+        Err(format!("Heading not found: {heading}"))
     }
 
     /// Return the content of the components, where each element a line
+    #[must_use]
     pub fn content(&self) -> Vec<String> {
         self.components()
             .iter()
@@ -185,6 +201,9 @@ impl ComponentRoot {
             .collect()
     }
 
+    /// # Panics
+    /// Panics if no component is focused or the focused component has no highlight link.
+    #[must_use]
     pub fn selected(&self) -> &str {
         let block = self
             .components
@@ -206,19 +225,21 @@ impl ComponentRoot {
     }
 
     /// Because of the parsing, every table has a missing newline at the end
+    #[must_use]
     pub fn add_missing_components(self) -> Self {
         let mut components = Vec::new();
         let mut iter = self.components.into_iter().peekable();
         while let Some(component) = iter.next() {
             let kind = component.kind();
             components.push(component);
-            if let Some(next) = iter.peek() {
-                if kind != TextNode::LineBreak && next.kind() != TextNode::LineBreak {
-                    components.push(Component::TextComponent(TextComponent::new(
-                        TextNode::LineBreak,
-                        Vec::new(),
-                    )));
-                }
+            if let Some(next) = iter.peek()
+                && kind != TextNode::LineBreak
+                && next.kind() != TextNode::LineBreak
+            {
+                components.push(Component::TextComponent(TextComponent::new(
+                    TextNode::LineBreak,
+                    Vec::new(),
+                )));
             }
         }
         Self {
@@ -228,10 +249,12 @@ impl ComponentRoot {
         }
     }
 
+    #[must_use]
     pub fn height(&self) -> u16 {
-        self.components.iter().map(|c| c.height()).sum()
+        self.components.iter().map(ComponentProps::height).sum()
     }
 
+    #[must_use]
     pub fn num_links(&self) -> usize {
         self.components
             .iter()
@@ -239,7 +262,7 @@ impl ComponentRoot {
                 Component::TextComponent(comp) => Some(comp),
                 Component::Image(_) => None,
             })
-            .map(|c| c.num_links())
+            .map(super::textcomponent::TextComponent::num_links)
             .sum()
     }
 }

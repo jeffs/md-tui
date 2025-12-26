@@ -21,6 +21,13 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
     }
 }
 
+/// # Panics
+///
+/// Panics if the channel receiver is disconnected.
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Sender is typically passed by value in channel patterns"
+)]
 pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std::path::PathBuf>) {
     let mut ignored_files = Vec::new();
 
@@ -34,14 +41,15 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
     for path in starting_paths {
         if path.is_dir() {
             stack.push_back(path);
-        } else if path.is_file() && path.extension().unwrap_or_default() == "md" {
-            if let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name()) {
-                tx.send(Some(MdFile::new(
-                    path_str.to_string(),
-                    path_name.to_str().unwrap_or("UNKNOWN").to_string(),
-                )))
-                .unwrap();
-            }
+        } else if path.is_file()
+            && path.extension().unwrap_or_default() == "md"
+            && let (Some(path_str), Some(path_name)) = (path.to_str(), path.file_name())
+        {
+            tx.send(Some(MdFile::new(
+                path_str.to_string(),
+                path_name.to_str().unwrap_or("UNKNOWN").to_string(),
+            )))
+            .unwrap();
         }
     }
 
@@ -50,14 +58,10 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
             entries
                 .into_iter()
                 .sorted_unstable_by(|a, b| {
-                    let a = if let Ok(a) = a {
-                        a
-                    } else {
+                    let Ok(a) = a else {
                         return std::cmp::Ordering::Equal;
                     };
-                    let b = if let Ok(b) = b {
-                        b
-                    } else {
+                    let Ok(b) = b else {
                         return std::cmp::Ordering::Equal;
                     };
                     a.path().cmp(&b.path())
@@ -93,10 +97,11 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
                     path_name.to_string(),
                 )))
                 .unwrap();
-            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str()) {
-                if GENERAL_CONFIG.gitignore && file_name == ".gitignore" {
-                    add_to_gitingore(path, &mut ignored_files);
-                }
+            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str())
+                && GENERAL_CONFIG.gitignore
+                && file_name == ".gitignore"
+            {
+                add_to_gitingore(path, &mut ignored_files);
             }
         }
     }
@@ -104,6 +109,7 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>, starting_paths: Vec<std
     tx.send(None).unwrap();
 }
 
+#[must_use]
 pub fn find_md_files() -> FileTree {
     let mut ignored_files = Vec::new();
 
@@ -146,10 +152,11 @@ pub fn find_md_files() -> FileTree {
                 }
 
                 tree.add_file(MdFile::new(path_str.to_string(), path_name.to_string()));
-            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str()) {
-                if GENERAL_CONFIG.gitignore && file_name == ".gitignore" {
-                    add_to_gitingore(path, &mut ignored_files);
-                }
+            } else if let (Some(file_name), Some(path)) = (path.file_name(), path.to_str())
+                && GENERAL_CONFIG.gitignore
+                && file_name == ".gitignore"
+            {
+                add_to_gitingore(path, &mut ignored_files);
             }
         }
     }
@@ -157,30 +164,32 @@ pub fn find_md_files() -> FileTree {
     tree
 }
 
+#[must_use]
 pub fn find_files(files: &[MdFile], query: &str) -> Vec<MdFile> {
     if query.is_empty() {
         return files.to_vec();
     }
 
     // Check if any char in the query is uppercase, making the search case sensitive
-    let case_sensitive = query.chars().any(|c| c.is_uppercase());
+    let case_sensitive = query.chars().any(char::is_uppercase);
 
     files
         .iter()
         .filter(|file| {
             let file_path = if case_sensitive {
-                file.path.to_owned()
+                file.path.clone()
             } else {
                 file.path.to_lowercase()
             };
-            let res = char_windows(&file_path, query.len())
-                .any(|window| damerau_levenshtein(window, query) == 0);
-            res
+
+            char_windows(&file_path, query.len())
+                .any(|window| damerau_levenshtein(window, query) == 0)
         })
         .cloned()
         .collect()
 }
 
+#[must_use]
 pub fn find_with_backoff(query: &str, text: &str) -> Vec<usize> {
     let precision = 0;
     let mut result = find(query, text, precision);
@@ -191,10 +200,11 @@ pub fn find_with_backoff(query: &str, text: &str) -> Vec<usize> {
     result
 }
 
+#[must_use]
 pub fn find(query: &str, text: &str, precision: usize) -> Vec<usize> {
     let mut result = Vec::new();
 
-    let case_sensitive = query.chars().any(|c| c.is_uppercase());
+    let case_sensitive = query.chars().any(char::is_uppercase);
 
     char_windows(text, query.len())
         .enumerate()
@@ -214,7 +224,8 @@ pub fn find(query: &str, text: &str, precision: usize) -> Vec<usize> {
 }
 
 /// Returns line numbers that match the query with the given precision.
-pub fn line_match(query: &str, text: Vec<&str>, precision: usize) -> Vec<usize> {
+#[must_use]
+pub fn line_match(query: &str, text: &[&str], precision: usize) -> Vec<usize> {
     text.iter()
         .enumerate()
         .filter_map(|(i, line)| {
@@ -227,11 +238,8 @@ pub fn line_match(query: &str, text: Vec<&str>, precision: usize) -> Vec<usize> 
         .collect()
 }
 
-pub fn line_match_and_index(
-    query: &str,
-    lines: Vec<&str>,
-    precision: usize,
-) -> Vec<(usize, usize)> {
+#[must_use]
+pub fn line_match_and_index(query: &str, lines: &[&str], precision: usize) -> Vec<(usize, usize)> {
     lines
         .iter()
         .enumerate()
@@ -243,7 +251,8 @@ pub fn line_match_and_index(
         .collect()
 }
 
-pub fn find_with_ref<'a>(query: &str, text: Vec<&'a Word>) -> Vec<&'a Word> {
+#[must_use]
+pub fn find_with_ref<'a>(query: &str, text: &[&'a Word]) -> Vec<&'a Word> {
     let window_size = query
         .split_whitespace()
         .fold(0usize, |acc, _| acc + 2)
@@ -256,10 +265,10 @@ pub fn find_with_ref<'a>(query: &str, text: Vec<&'a Word>) -> Vec<&'a Word> {
     text.windows(window_size)
         .filter(|word| {
             let mut words = word.iter().map(|c| c.content()).join("");
-            let case_sensitive = query.chars().any(|c| c.is_uppercase());
+            let case_sensitive = query.chars().any(char::is_uppercase);
 
             words = if case_sensitive {
-                words.to_owned()
+                words.clone()
             } else {
                 words.to_lowercase()
             };
@@ -283,20 +292,20 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
 
     windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
         let mut words = window.iter().map(|c| c.content()).join("");
-        let case_sensitive = query.chars().any(|c| c.is_uppercase());
+        let case_sensitive = query.chars().any(char::is_uppercase);
 
         words = if case_sensitive {
-            words.to_owned()
+            words.clone()
         } else {
             words.to_lowercase()
         };
 
         if damerau_levenshtein(query, &words) == 0 {
-            window
-                .iter_mut()
-                .for_each(|word| word.set_kind(WordType::Selected));
+            for word in window.iter_mut() {
+                word.set_kind(WordType::Selected);
+            }
         }
-    })
+    });
 }
 
 fn windows_mut_for_each<T>(v: &mut [T], n: usize, f: impl Fn(&mut [T])) {
@@ -310,7 +319,7 @@ fn windows_mut_for_each<T>(v: &mut [T], n: usize, f: impl Fn(&mut [T])) {
 }
 
 fn char_windows(src: &str, win_size: usize) -> impl Iterator<Item = &'_ str> {
-    src.char_indices().flat_map(move |(from, _)| {
+    src.char_indices().filter_map(move |(from, _)| {
         src[from..]
             .char_indices()
             .nth(win_size - 1)
@@ -318,6 +327,7 @@ fn char_windows(src: &str, win_size: usize) -> impl Iterator<Item = &'_ str> {
     })
 }
 
+#[must_use]
 pub fn compare_heading(link_header: &str, header: &[Vec<Word>]) -> bool {
     let header: String = header
         .iter()
@@ -377,7 +387,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "World"];
         let query = "world";
         let precision = 0;
-        let result = line_match(query, text, precision);
+        let result = line_match(query, &text, precision);
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -386,7 +396,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "World"];
         let query = "world";
         let precision = 1;
-        let result = line_match(query, text, precision);
+        let result = line_match(query, &text, precision);
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -395,7 +405,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "World"];
         let query = "wrold";
         let precision = 2;
-        let result = line_match(query, text, precision);
+        let result = line_match(query, &text, precision);
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -404,7 +414,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "hello world"];
         let query = "world";
         let precision = 0;
-        let result = line_match_and_index(query, text, precision);
+        let result = line_match_and_index(query, &text, precision);
         assert_eq!(result, vec![(2, 0), (3, 6)]);
     }
 
@@ -413,7 +423,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", "hello world"];
         let query = "wrold";
         let precision = 2;
-        let result = line_match_and_index(query, text, precision);
+        let result = line_match_and_index(query, &text, precision);
         assert_eq!(result, vec![(2, 0), (3, 6)]);
     }
 
@@ -422,7 +432,7 @@ mod tests {
         let text = vec!["Hello", "hello", "world", " hello world"];
         let query = "world";
         let precision = 0;
-        let result = line_match_and_index(query, text, precision);
+        let result = line_match_and_index(query, &text, precision);
         assert_eq!(result, vec![(2, 0), (3, 7)]);
     }
 
@@ -438,7 +448,7 @@ mod tests {
         let componet = Component::TextComponent(TextComponent::new(TextNode::Paragraph, text));
         let root = ComponentRoot::new(None, vec![componet]);
         let query = "world";
-        let result = find_with_ref(query, root.words());
+        let result = find_with_ref(query, &root.words());
         assert_eq!(result.len(), 2);
     }
     #[test]
@@ -454,7 +464,7 @@ mod tests {
         let componet = Component::TextComponent(TextComponent::new(TextNode::Paragraph, text));
         let root = ComponentRoot::new(None, vec![componet]);
         let query = "hello world";
-        let result = find_with_ref(query, root.words());
+        let result = find_with_ref(query, &root.words());
         assert_eq!(result.len(), 3);
     }
 
@@ -471,12 +481,13 @@ mod tests {
         let componet = Component::TextComponent(TextComponent::new(TextNode::Paragraph, text));
         let root = ComponentRoot::new(None, vec![componet]);
         let query = "hello world";
-        let result = find_with_ref(query, root.words());
+        let words = root.words();
+        let result = find_with_ref(query, &words);
 
-        assert_ne!(result[0], root.words()[0]);
-        assert_eq!(result[0], root.words()[1]);
-        assert_eq!(result[1], root.words()[2]);
-        assert_eq!(result[2], root.words()[3]);
+        assert_ne!(result[0], words[0]);
+        assert_eq!(result[0], words[1]);
+        assert_eq!(result[1], words[2]);
+        assert_eq!(result[2], words[3]);
     }
 
     #[test]
@@ -490,11 +501,11 @@ your markdown notes, or opening external links from someones README.
 
         let markdown = parse_markdown(None, text, 80);
 
-        let result = find_with_ref("in", markdown.words());
+        let result = find_with_ref("in", &markdown.words());
         dbg!(&result);
         assert_eq!(result.len(), 2);
 
-        let result = find_with_ref("markdown notes,", markdown.words());
+        let result = find_with_ref("markdown notes,", &markdown.words());
         assert_eq!(result.len(), 3);
     }
 

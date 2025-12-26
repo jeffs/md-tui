@@ -28,6 +28,7 @@ fn clips_lower_bound(area: Rect, component: &TextComponent) -> bool {
         > area.height
 }
 
+#[derive(Clone, Copy)]
 enum Clipping {
     Both,
     Upper,
@@ -75,18 +76,18 @@ impl Widget for TextComponent {
             .to_owned()
             .first()
             .cloned()
-            .unwrap_or_else(|| Word::new("".to_string(), WordType::Normal));
+            .unwrap_or_else(|| Word::new(String::new(), WordType::Normal));
 
         let area = Rect { height, y, ..area };
 
         match kind {
             TextNode::Paragraph => render_paragraph(area, buf, self, clips),
-            TextNode::Heading => render_heading(area, buf, self),
+            TextNode::Heading => render_heading(area, buf, &self),
             TextNode::Task => render_task(area, buf, self, clips, &meta_info),
             TextNode::List => render_list(area, buf, self, clips),
-            TextNode::CodeBlock => render_code_block(area, buf, self, clips),
+            TextNode::CodeBlock => render_code_block(area, buf, &self, clips),
             TextNode::Table(widths, heights) => {
-                render_table(area, buf, self, clips, widths, heights)
+                render_table(area, buf, self, clips, &widths, &heights);
             }
             TextNode::Quote => render_quote(area, buf, self, clips),
             TextNode::LineBreak => (),
@@ -129,8 +130,9 @@ fn style_word(word: &Word) -> Span<'_> {
                 .fg(color_config().striketrough_color)
                 .add_modifier(Modifier::CROSSED_OUT),
         ),
-        WordType::White => Span::styled(word.content(), Style::default().fg(Color::White)),
-        WordType::ListMarker => Span::styled(word.content(), Style::default().fg(Color::White)),
+        WordType::White | WordType::ListMarker => {
+            Span::styled(word.content(), Style::default().fg(Color::White))
+        }
         WordType::BoldItalic => Span::styled(
             word.content(),
             Style::default()
@@ -152,21 +154,21 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
     let mut content = component.content_owned();
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
@@ -181,8 +183,8 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
         meta.content()
             .split_whitespace()
             .next()
-            .map(|c| c.to_lowercase())
-            .map(|c| match c.as_str() {
+            .map(str::to_lowercase)
+            .map_or(color_config().quote_bg_color, |c| match c.as_str() {
                 "[!tip]" => color_config().quote_tip,
                 "[!warning]" => color_config().quote_warning,
                 "[!caution]" => color_config().quote_caution,
@@ -190,7 +192,6 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
                 "[!note]" => color_config().quote_note,
                 _ => color_config().quote_default,
             })
-            .unwrap_or(color_config().quote_bg_color)
     } else {
         Color::White
     };
@@ -213,39 +214,18 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
 }
 
 fn style_heading(word: &Word, indent: u8) -> Span<'_> {
-    match indent {
-        1 => Span::styled(
-            word.content(),
-            Style::default().fg(color_config().heading_fg_color),
-        ),
-        2 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_2),
-        ),
-        3 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_3),
-        ),
-        4 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_4),
-        ),
-        5 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_5),
-        ),
-        6 => Span::styled(
-            word.content(),
-            Style::default().fg(heading_colors().level_6),
-        ),
-        _ => Span::styled(
-            word.content(),
-            Style::default().fg(color_config().heading_fg_color),
-        ),
-    }
+    let color = match indent {
+        2 => heading_colors().level_2,
+        3 => heading_colors().level_3,
+        4 => heading_colors().level_4,
+        5 => heading_colors().level_5,
+        6 => heading_colors().level_6,
+        _ => color_config().heading_fg_color,
+    };
+    Span::styled(word.content(), Style::default().fg(color))
 }
 
-fn render_heading(area: Rect, buf: &mut Buffer, component: TextComponent) {
+fn render_heading(area: Rect, buf: &mut Buffer, component: &TextComponent) {
     let indent = if let Some(meta) = component.meta_info().first() {
         match meta.kind() {
             WordType::MetaInfo(MetaData::HeadingLevel(e)) => e,
@@ -279,21 +259,21 @@ fn render_paragraph(area: Rect, buf: &mut Buffer, component: TextComponent, clip
     let mut content = component.content_owned();
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
@@ -316,21 +296,21 @@ fn render_list(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cli
     let mut content = component.content_owned();
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
@@ -346,7 +326,7 @@ fn render_list(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cli
     list.render(area, buf);
 }
 
-fn render_code_block(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Clipping) {
+fn render_code_block(area: Rect, buf: &mut Buffer, component: &TextComponent, clip: Clipping) {
     let mut content = component
         .content()
         .iter()
@@ -356,18 +336,17 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: TextComponent, cli
     match clip {
         Clipping::Both => {
             let top = component.scroll_offset() - component.y_offset();
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
-            // panic!("offset: {}, height: {}, len: {}", offset, height, len);
+            let offset = len - usize::from(height);
             content.drain(0..offset);
         }
         Clipping::Lower => {
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
         }
         Clipping::None => (),
     }
@@ -387,13 +366,17 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: TextComponent, cli
     paragraph.render(area, buf);
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "table cell iteration coordinates row/column state that would be awkward to pass between functions"
+)]
 fn render_table(
     area: Rect,
     buf: &mut Buffer,
     component: TextComponent,
     clip: Clipping,
-    widths: Vec<u16>,
-    heights: Vec<u16>,
+    widths: &[u16],
+    heights: &[u16],
 ) {
     let scroll_offset = component.scroll_offset();
     let y_offset = component.y_offset();
@@ -417,9 +400,13 @@ fn render_table(
             .map(|(column_i, entry)| {
                 let mut line = vec![];
                 let mut lines = vec![];
-                let mut line_len = 0;
-                for word in entry.iter() {
-                    let word_len = word.content().len() as u16;
+                let mut line_len: u16 = 0;
+                for word in entry {
+                    let word_len: u16 = word
+                        .content()
+                        .len()
+                        .try_into()
+                        .expect("word length fits in u16");
                     line_len += word_len;
                     if line_len <= widths[column_i] {
                         line.push(word);
@@ -428,7 +415,7 @@ fn render_table(
                             line.into_iter().map(style_word).collect::<Vec<_>>(),
                         ));
                         line = vec![word];
-                        line_len -= widths[column_i]
+                        line_len -= widths[column_i];
                     }
                 }
 
@@ -455,17 +442,16 @@ fn render_table(
         Clipping::None => (0, height),
     };
 
-    let (start_i, stop_i) = (
-        start_i as usize,
-        (stop_i).saturating_sub(heights[0]) as usize,
-    );
+    let start_i = usize::from(start_i);
+    let stop_i = usize::from(stop_i.saturating_sub(heights[0]));
     let mut line_i = 0;
     let rows = moved_content
         .iter()
         .enumerate()
         .filter_map(|(row_i, c)| {
-            if (line_i + heights[row_i + 1] as usize) <= start_i {
-                line_i += heights[row_i + 1] as usize;
+            let row_height = usize::from(heights[row_i + 1]);
+            if (line_i + row_height) <= start_i {
+                line_i += row_height;
                 return None;
             } else if stop_i <= line_i {
                 return None;
@@ -473,11 +459,11 @@ fn render_table(
 
             let start_cell_line_i = start_i.saturating_sub(line_i);
             let stop_cell_line_i = stop_i.saturating_sub(line_i);
-            let n_cell_lines = (heights[row_i + 1] as usize)
+            let n_cell_lines = row_height
                 .min(stop_cell_line_i)
                 .saturating_sub(start_cell_line_i);
 
-            line_i += heights[row_i + 1] as usize;
+            line_i += row_height;
 
             Some(
                 Row::new(
@@ -486,9 +472,13 @@ fn render_table(
                         .map(|(column_i, entry)| {
                             let mut acc = vec![];
                             let mut lines = vec![];
-                            let mut line_len = 0;
-                            for word in entry.iter() {
-                                let word_len = word.content().len() as u16;
+                            let mut line_len: u16 = 0;
+                            for word in entry {
+                                let word_len: u16 = word
+                                    .content()
+                                    .len()
+                                    .try_into()
+                                    .expect("word length fits in u16");
                                 line_len += word_len;
                                 if line_len <= widths[column_i] {
                                     acc.push(word);
@@ -522,12 +512,12 @@ fn render_table(
                         })
                         .collect::<Vec<_>>(),
                 )
-                .height(n_cell_lines as u16),
+                .height(n_cell_lines.try_into().expect("cell line count fits in u16")),
             )
         })
         .collect::<Vec<_>>();
 
-    let table = Table::new(rows, widths)
+    let table = Table::new(rows, widths.to_vec())
         .header(
             header.style(
                 Style::default()
@@ -578,21 +568,21 @@ fn render_task(
 
     let content = match clip {
         Clipping::Both => {
-            content.drain(0..top as usize);
-            content.drain(area.height as usize..);
+            content.drain(0..usize::from(top));
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::Upper => {
             let len = content.len();
             let height = area.height;
-            let offset = len - height as usize;
+            let offset = len - usize::from(height);
             let mut content = content;
             content.drain(0..offset);
             content
         }
         Clipping::Lower => {
             let mut content = content;
-            content.drain(area.height as usize..);
+            content.drain(usize::from(area.height)..);
             content
         }
         Clipping::None => content,
