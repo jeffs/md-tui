@@ -5,7 +5,7 @@
 
 ## Summary
 
-Enhance the keybinding system to support (1) multiple keys per action via array syntax and (2) control key modifiers via `ctrl+key` syntax. The implementation requires refactoring `KeyConfig` from single `char` fields to `Vec<KeyBinding>`, updating config parsing to handle both string and array values, and modifying `key_to_action()` to accept `KeyEvent` (with modifiers) instead of `KeyCode`.
+Enhance the keybinding system to support (1) multiple keys per action via array syntax and (2) control key modifiers via `C-key` syntax (Emacs/Helix style). The implementation requires refactoring `KeyConfig` from single `char` fields to `Vec<KeyBinding>`, updating config parsing to handle both string and array values, and modifying `key_to_action()` to accept `KeyEvent` (with modifiers) instead of `KeyCode`.
 
 ## Technical Context
 
@@ -79,7 +79,7 @@ Use the `config` crate's `Value` type to handle polymorphic input:
 - Array value → parse as Vec<KeyBinding>
 
 Parsing logic for key strings:
-1. Check for modifier prefix: `ctrl+`, `ctrl-`, `control+`, `control-`
+1. Check for modifier prefix: `C-` (case-insensitive)
 2. Parse the key portion: single char, or named key (`space`, `tab`, etc.)
 3. Construct KeyBinding with appropriate KeyCode and KeyModifiers
 

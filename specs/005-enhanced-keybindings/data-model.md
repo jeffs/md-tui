@@ -69,14 +69,14 @@ up = "k"
 page_down = ["d", " "]
 
 # Control modifier (new)
-down = ["j", "ctrl+e"]
-up = ["k", "ctrl+y"]
+down = ["j", "C-e"]
+up = ["k", "C-y"]
 
 # Named keys
 page_down = ["d", "space"]
 
 # Mixed
-half_page_down = ["l", "ctrl+d", " "]
+half_page_down = ["l", "C-d", " "]
 ```
 
 ### Parsing Rules
@@ -89,12 +89,11 @@ half_page_down = ["l", "ctrl+d", " "]
 ### Key String Format
 
 ```
-[modifier+]key
+[C-]key
 ```
 
 Where:
-- `modifier` (optional): `ctrl`, `control` (case-insensitive)
-- Separator: `+` or `-`
+- `C-` (optional): Control modifier prefix (case-insensitive)
 - `key`: single character or named key
 
 **Named keys**: `space`, `tab`, `enter`, `esc`, `backspace`

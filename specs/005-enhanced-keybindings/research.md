@@ -34,11 +34,11 @@ match settings.get::<config::Value>("up") {
 
 ## Key String Parsing
 
-**Decision**: Parse key strings with format `[modifier+]key` where:
-- Modifier prefixes: `ctrl+`, `ctrl-`, `control+`, `control-` (case-insensitive)
+**Decision**: Parse key strings with format `[C-]key` where:
+- Modifier prefix: `C-` (case-insensitive)
 - Key values: single character, or named keys (`space`, `tab`, `enter`, `esc`)
 
-**Rationale**: This matches common conventions in vim, emacs, and terminal emulators. The `+` and `-` separator flexibility accommodates user preferences.
+**Rationale**: The `C-` notation is consistent with Emacs and Helix conventions, making it familiar to users of those editors.
 
 **Named key mappings**:
 | Config String | KeyCode |
@@ -51,7 +51,8 @@ match settings.get::<config::Value>("up") {
 | Single char | `KeyCode::Char(c)` |
 
 **Alternatives considered**:
-- XML-style `<C-e>`: Less intuitive, vim-specific notation
+- `ctrl+key` / `control+key`: More verbose, less standard
+- XML-style `<C-e>`: Requires angle brackets, vim-specific
 - Separate modifier field in TOML: More verbose, harder to read
 
 ## Reserved Terminal Sequences
