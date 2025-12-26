@@ -256,6 +256,11 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
     };
     f.render_widget(file_tree, area);
 
+    // Only render Help bar area if help_bar is enabled or expanded
+    if !GENERAL_CONFIG.help_bar && !app.help_box.expanded() {
+        return;
+    }
+
     let area = if app.help_box.expanded() {
         Rect {
             x: x + 2,
@@ -309,9 +314,16 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
         }
     };
 
+    // Adjust content area height based on Help bar visibility
+    let content_height = if GENERAL_CONFIG.help_bar || app.help_box.expanded() {
+        size.height - 5
+    } else {
+        size.height - 2
+    };
+
     let area = Rect {
         width: app.width() - 3,
-        height: size.height - 5,
+        height: content_height,
         x,
         ..size
     };
@@ -360,6 +372,11 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
                 f.render_stateful_widget(image, inner_area, img.image_mut())
             }
         }
+    }
+
+    // Only render Help bar area if help_bar is enabled or expanded
+    if !GENERAL_CONFIG.help_bar && !app.help_box.expanded() {
+        return;
     }
 
     // Render a block at the bottom to show the current mode
