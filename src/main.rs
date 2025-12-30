@@ -177,13 +177,22 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             }
             if app.boxes == Boxes::Search {
                 let (search_height, search_width) = app.search_box.dimensions();
+                let frame_area = f.area();
+                let x = app.search_box.x();
+                let y = app.search_box.y();
+                // Clamp search area to fit within frame bounds
+                let clamped_width = search_width.min(frame_area.width.saturating_sub(x));
+                let clamped_height = search_height.min(frame_area.height.saturating_sub(y));
                 let search_area = Rect {
-                    x: app.search_box.x(),
-                    y: app.search_box.y(),
-                    width: search_width,
-                    height: search_height,
+                    x,
+                    y,
+                    width: clamped_width,
+                    height: clamped_height,
                 };
-                f.render_widget(app.search_box.clone(), search_area);
+                if clamped_width > 0 && clamped_height > 0 {
+                    f.render_widget(Clear, search_area);
+                    f.render_widget(app.search_box.clone(), search_area);
+                }
             } else if app.boxes == Boxes::Error {
                 let (error_height, error_width) = app.message_box.dimensions();
                 let error_area = Rect {

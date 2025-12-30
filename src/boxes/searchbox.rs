@@ -20,7 +20,7 @@ impl SearchBox {
         Self {
             text: String::new(),
             cursor: 0,
-            height: 2,
+            height: 3,
             width: 20,
             x: 0,
             y: 0,
@@ -97,8 +97,9 @@ impl Default for SearchBox {
 
 impl Widget for SearchBox {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let paragraph = Paragraph::new(self.text)
-            .block(Block::default().borders(Borders::BOTTOM))
+        let display_text = format!("Search: {}", self.text);
+        let paragraph = Paragraph::new(display_text)
+            .block(Block::default().borders(Borders::ALL))
             .wrap(Wrap { trim: true });
         paragraph.render(area, buf);
     }

@@ -116,6 +116,9 @@ impl TextComponent {
     pub fn content_as_lines(&self) -> Vec<String> {
         if let TextNode::Table(widths, _) = self.kind() {
             let column_count = widths.len();
+            if column_count == 0 {
+                return Vec::new();
+            }
 
             let moved_content = self.content.chunks(column_count).collect::<Vec<_>>();
 
@@ -284,6 +287,9 @@ impl TextComponent {
 
         if let TextNode::Table(widths, _) = self.kind() {
             let column_count = widths.len();
+            if column_count == 0 {
+                return heights;
+            }
             let iter = self.content.chunks(column_count).enumerate();
 
             for (i, line) in iter {
