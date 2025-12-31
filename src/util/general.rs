@@ -10,6 +10,7 @@ pub struct GeneralConfig {
     pub centering: Centering,
     pub help_box: bool,
     pub emoji_check_marks: bool,
+    pub flavor: Flavor,
 }
 
 #[derive(Debug, Deserialize)]
@@ -17,6 +18,20 @@ pub enum Centering {
     Left,
     Center,
     Right,
+}
+
+/// Markdown flavor for parsing behavior.
+///
+/// Different flavors interpret certain Markdown constructs differently.
+#[derive(Debug, Deserialize, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Flavor {
+    /// Standard `CommonMark` behavior: newlines within paragraphs become spaces.
+    #[default]
+    #[serde(alias = "commonmark")]
+    CommonMark,
+    /// Claude-style Markdown: newlines within paragraphs become line breaks.
+    #[serde(alias = "claude")]
+    Claude,
 }
 
 pub static GENERAL_CONFIG: LazyLock<GeneralConfig> = LazyLock::new(|| {
@@ -38,5 +53,6 @@ pub static GENERAL_CONFIG: LazyLock<GeneralConfig> = LazyLock::new(|| {
             .unwrap_or(Centering::Left),
         help_box: settings.get::<bool>("help_box").unwrap_or(true),
         emoji_check_marks: settings.get::<bool>("emoji_check_marks").unwrap_or(true),
+        flavor: settings.get::<Flavor>("flavor").unwrap_or_default(),
     }
 });

@@ -8,6 +8,7 @@ use tree_sitter_highlight::HighlightEvent;
 use crate::{
     highlight::{COLOR_MAP, HighlightInfo, highlight_code},
     nodes::word::MetaData,
+    util::general::{Flavor, GENERAL_CONFIG},
 };
 
 use super::word::{Word, WordType};
@@ -427,7 +428,13 @@ fn transform_paragraph(component: &mut TextComponent, width: u16) {
         _ => unreachable!(),
     };
 
-    let mut lines = word_wrapping(component.content.iter().flatten(), width, true);
+    let mut lines = if GENERAL_CONFIG.flavor == Flavor::Claude {
+        // Claude flavor: respect embedded newlines as hard line breaks
+        word_wrapping_with_hard_breaks(component.content.iter().flatten(), width)
+    } else {
+        // CommonMark: standard word wrapping (newlines already collapsed to spaces)
+        word_wrapping(component.content.iter().flatten(), width, true)
+    };
 
     if component.kind() == TextNode::Quote {
         let is_special_quote = !component.meta_info.is_empty();
@@ -442,6 +449,52 @@ fn transform_paragraph(component: &mut TextComponent, width: u16) {
         .try_into()
         .expect("line count fits in terminal height");
     component.content = lines;
+}
+
+/// Word wrapping that respects embedded newlines as hard line breaks.
+///
+/// For Claude-style Markdown where source newlines should become rendered breaks.
+fn word_wrapping_with_hard_breaks<'a>(
+    words: impl IntoIterator<Item = &'a Word>,
+    width: usize,
+) -> Vec<Vec<Word>> {
+    let mut all_lines = Vec::new();
+    let mut segment: Vec<Word> = Vec::new();
+
+    for word in words {
+        if word.content().contains('\n') {
+            // Split word on newlines
+            for (i, part) in word.content().split('\n').enumerate() {
+                if i > 0 {
+                    // Hard break: wrap current segment, start new line
+                    if segment.is_empty() {
+                        // Empty segment means consecutive newlines - add empty line
+                        all_lines.push(Vec::new());
+                    } else {
+                        all_lines.extend(word_wrapping(segment.iter(), width, true));
+                        segment = Vec::new();
+                    }
+                }
+                if !part.is_empty() {
+                    segment.push(Word::new(part.to_string(), word.kind()));
+                }
+            }
+        } else {
+            segment.push(word.clone());
+        }
+    }
+
+    // Don't forget final segment
+    if !segment.is_empty() {
+        all_lines.extend(word_wrapping(segment.iter(), width, true));
+    }
+
+    // Ensure at least one line exists
+    if all_lines.is_empty() {
+        all_lines.push(Vec::new());
+    }
+
+    all_lines
 }
 
 fn transform_codeblock(component: &mut TextComponent) {

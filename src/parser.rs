@@ -13,6 +13,7 @@ use crate::nodes::{
     textcomponent::{TextComponent, TextNode},
     word::{MetaData, Word, WordType},
 };
+use crate::util::general::{Flavor, GENERAL_CONFIG};
 
 #[derive(Parser)]
 #[grammar = "md.pest"]
@@ -46,12 +47,18 @@ pub fn parse_markdown(name: Option<&str>, content: &str, width: u16) -> Componen
 }
 
 fn parse_text(pair: Pair<'_, Rule>) -> ParseNode {
-    let content = if pair.as_rule() == Rule::code_line {
-        pair.as_str().replace('\t', "    ").replace('\r', "")
+    let rule = pair.as_rule();
+    let raw = pair.as_str();
+    let content = if rule == Rule::code_line {
+        raw.replace('\t', "    ").replace('\r', "")
+    } else if GENERAL_CONFIG.flavor == Flavor::Claude {
+        // Claude flavor: preserve newlines as hard line breaks
+        raw.replace('\r', "")
     } else {
-        pair.as_str().replace('\n', " ")
+        // CommonMark: collapse newlines to spaces for text reflow
+        raw.replace('\n', " ")
     };
-    let mut component = ParseNode::new(pair.as_rule().into(), content);
+    let mut component = ParseNode::new(rule.into(), content);
     let children = parse_node_children(pair.into_inner());
     component.add_children(children);
     component
@@ -434,6 +441,22 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
         leaf_nodes.push(comp);
     }
 
+    // For Claude flavor: preserve leading newlines in formatted text
+    if GENERAL_CONFIG.flavor == Flavor::Claude
+        && matches!(
+            node.kind(),
+            MdParseEnum::CodeStr
+                | MdParseEnum::ItalicStr
+                | MdParseEnum::BoldStr
+                | MdParseEnum::BoldItalicStr
+                | MdParseEnum::StrikethroughStr
+        )
+        && node.content().starts_with('\n')
+    {
+        let comp = ParseNode::new(MdParseEnum::Word, "\n".to_owned());
+        leaf_nodes.push(comp);
+    }
+
     if node.children().is_empty() {
         leaf_nodes.push(node);
     } else {
@@ -673,6 +696,56 @@ impl From<Rule> for MdParseEnum {
             | Rule::WHITESPACE_S
             | Rule::wiki_link
             | Rule::footnote_ref_container => todo!(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_with_newlines() {
+        let content = "Line one\nLine two\nLine three";
+        eprintln!("Input: {:?}", content);
+        eprintln!("Flavor: {:?}", GENERAL_CONFIG.flavor);
+
+        let root = parse_markdown(None, content, 80);
+        eprintln!("Parsed {} components", root.components().len());
+
+        for (i, comp) in root.components().iter().enumerate() {
+            eprintln!("Component {}: {:?}", i, comp.kind());
+            for (j, row) in comp.content().iter().enumerate() {
+                for (k, word) in row.iter().enumerate() {
+                    eprintln!("  Row {} Word {}: {:?}", j, k, word.content());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_technical_context() {
+        // This is the content that should show separate lines
+        let content = r#"## Technical Context
+
+**Language/Version**: Rust 1.92.0 (2024 edition)
+**Primary Dependencies**: ratatui 0.29.0
+**Storage**: N/A"#;
+
+        eprintln!("Input:\n{}", content);
+        eprintln!("Flavor: {:?}", GENERAL_CONFIG.flavor);
+
+        let root = parse_markdown(None, content, 80);
+        eprintln!("Parsed {} components", root.components().len());
+
+        for (i, comp) in root.components().iter().enumerate() {
+            eprintln!("\nComponent {}: {:?}", i, comp.kind());
+            for (j, row) in comp.content().iter().enumerate() {
+                for (k, word) in row.iter().enumerate() {
+                    // Show raw content with escapes
+                    eprintln!("  Row {} Word {}: {:?} (kind: {:?})", j, k, word.content(), word.kind());
+                }
+            }
         }
     }
 }
