@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Fork Context
+
+This is a fork of henriklovhaug/md-tui. Read `memory/upstream-strategy.md` for critical context on:
+- Dual-track development (pedantic locally, non-pedantic for upstream PRs)
+- How to create PRs without conflicts
+- How to merge upstream changes
+- Why cherry-picking from main to PR branches doesn't work
+
 ## Project Overview
 
 MD-TUI is a terminal user interface (TUI) markdown viewer written in Rust. The binary is named `mdt`. It provides rich formatting, syntax highlighting via tree-sitter, image rendering, and interactive navigation.
@@ -74,6 +82,8 @@ Environment variables: `MDT_` prefix (e.g., `MDT_WIDTH=120`)
 Edit `src/md.pest` PEG grammar, then test with `cargo test` and real markdown files.
 
 ## Code Style
+
+This fork uses `clippy::pedantic` lint level. Upstream does not. See `memory/upstream-strategy.md` for how to handle this when contributing upstream.
 
 ### Rustdoc Headers
 
