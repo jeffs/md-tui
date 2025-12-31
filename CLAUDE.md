@@ -85,6 +85,18 @@ Edit `src/md.pest` PEG grammar, then test with `cargo test` and real markdown fi
 
 This fork uses `clippy::pedantic` lint level. Upstream does not. See `memory/upstream-strategy.md` for how to handle this when contributing upstream.
 
+### Path Qualifications
+
+Use the shortest path that compiles. If a type is already imported, use the short name:
+
+```rust
+// Good - Word is already imported
+.filter(Word::is_renderable)
+
+// Bad - unnecessary qualification
+.filter(super::word::Word::is_renderable)
+```
+
 ### Rustdoc Headers
 
 In rustdoc Markdown, any header (such as `# Panics`) must be followed by a blank `///` line:

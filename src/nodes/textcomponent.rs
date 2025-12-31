@@ -51,7 +51,7 @@ impl TextComponent {
 
         let content = content
             .into_iter()
-            .filter(super::word::Word::is_renderable)
+            .filter(Word::is_renderable)
             .collect();
 
         Self {
@@ -82,7 +82,7 @@ impl TextComponent {
             .into_iter()
             .map(|c| {
                 c.into_iter()
-                    .filter(super::word::Word::is_renderable)
+                    .filter(Word::is_renderable)
                     .collect()
             })
             .collect::<Vec<Vec<Word>>>();
@@ -127,7 +127,7 @@ impl TextComponent {
             moved_content.iter().for_each(|line| {
                 let temp = line
                     .iter()
-                    .map(|c| c.iter().map(super::word::Word::content).join(""))
+                    .map(|c| c.iter().map(Word::content).join(""))
                     .join(" ");
                 lines.push(temp);
             });
@@ -138,7 +138,7 @@ impl TextComponent {
                 .iter()
                 .map(|c| {
                     c.iter()
-                        .map(super::word::Word::content)
+                        .map(Word::content)
                         .collect::<Vec<_>>()
                         .join("")
                 })
