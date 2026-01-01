@@ -6,7 +6,7 @@ use strsim::damerau_levenshtein;
 use crate::{
     nodes::word::{Word, WordType},
     pages::file_explorer::{FileTree, MdFile},
-    util::general::GENERAL_CONFIG,
+    util::general::{SearchStyle, GENERAL_CONFIG},
 };
 
 fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
@@ -290,6 +290,33 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
         return;
     }
 
+    let search_style = GENERAL_CONFIG.search_style;
+
+    // TODO: implement true fuzzy matching for SearchStyle::Fuzz
+    // For now, Fuzz falls back to Flex behavior.
+
+    // Flex mode with single-word query: do substring matching within each word
+    if matches!(search_style, SearchStyle::Flex | SearchStyle::Fuzz) && window_size == 1 {
+        let case_sensitive = query.chars().any(char::is_uppercase);
+        let query_lower = query.to_lowercase();
+
+        for word in text.iter_mut() {
+            let content = if case_sensitive {
+                word.content().to_owned()
+            } else {
+                word.content().to_lowercase()
+            };
+
+            let search_query = if case_sensitive { query } else { &query_lower };
+
+            if content.contains(search_query) {
+                word.set_kind(WordType::Selected);
+            }
+        }
+        return;
+    }
+
+    // Word mode, or Flex/Fuzz mode with multi-word query: phrase matching
     windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
         let mut words = window.iter().map(|c| c.content()).join("");
         let case_sensitive = query.chars().any(char::is_uppercase);

@@ -11,6 +11,7 @@ pub struct GeneralConfig {
     pub help_box: bool,
     pub emoji_check_marks: bool,
     pub flavor: Flavor,
+    pub search_style: SearchStyle,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,6 +35,21 @@ pub enum Flavor {
     Claude,
 }
 
+/// Search style for in-document search.
+#[derive(Debug, Deserialize, Default, Clone, Copy, PartialEq, Eq)]
+pub enum SearchStyle {
+    /// Whole-word matching only. Query must match complete words.
+    #[serde(alias = "word")]
+    Word,
+    /// Flexible matching: substring for single words, phrase matching for multi-word.
+    #[default]
+    #[serde(alias = "flex")]
+    Flex,
+    /// Fuzzy matching using Damerau-Levenshtein distance (not yet implemented).
+    #[serde(alias = "fuzz")]
+    Fuzz,
+}
+
 pub static GENERAL_CONFIG: LazyLock<GeneralConfig> = LazyLock::new(|| {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir.join(".config").join("mdt").join("config.toml");
@@ -54,5 +70,6 @@ pub static GENERAL_CONFIG: LazyLock<GeneralConfig> = LazyLock::new(|| {
         help_box: settings.get::<bool>("help_box").unwrap_or(true),
         emoji_check_marks: settings.get::<bool>("emoji_check_marks").unwrap_or(true),
         flavor: settings.get::<Flavor>("flavor").unwrap_or_default(),
+        search_style: settings.get::<SearchStyle>("search_style").unwrap_or_default(),
     }
 });
