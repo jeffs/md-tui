@@ -70,6 +70,16 @@ Environment variables: `MDT_` prefix (e.g., `MDT_WIDTH=120`)
 
 ## Development Patterns
 
+### Feature Numbering (speckit)
+
+When using `/speckit.specify` to create a new feature, **always check `specs/` first** to find the highest existing feature number:
+
+```bash
+ls specs/
+```
+
+The new feature number must be N+1 where N is the highest existing number. Do not reuse numbers or create gaps. The speckit script checks branch names but may miss specs directories from other branches.
+
 ### Adding Syntax Highlighting
 
 1. Create `src/highlight/<language>.rs` using tree-sitter
