@@ -244,12 +244,9 @@ fn keyboard_mode_view(
                     return KeyBoardAction::Continue;
                 }
 
-                let next = heights.iter().find(|row| {
-                    **row >= usize::from(app.vertical_scroll) + usize::from(height) / 2
-                });
-
-                if let Some(index) = next {
-                    let index_u16: u16 = (*index)
+                // Go to the first match in the document
+                if let Some(&first) = heights.first() {
+                    let index_u16: u16 = first
                         .try_into()
                         .expect("search result row fits in terminal height");
                     app.vertical_scroll = cmp::min(

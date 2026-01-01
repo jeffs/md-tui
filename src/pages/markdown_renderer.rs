@@ -215,6 +215,17 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
 }
 
 fn style_heading(word: &Word, indent: u8) -> Span<'_> {
+    // Check for search selection first - selected words should be highlighted
+    // regardless of heading level
+    if word.kind() == WordType::Selected {
+        return Span::styled(
+            word.content(),
+            Style::default()
+                .fg(color_config().link_selected_fg_color)
+                .bg(color_config().link_selected_bg_color),
+        );
+    }
+
     let color = match indent {
         2 => heading_colors().level_2,
         3 => heading_colors().level_3,
