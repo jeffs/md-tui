@@ -378,6 +378,95 @@ fn render_code_block(area: Rect, buf: &mut Buffer, component: &TextComponent, cl
     paragraph.render(area, buf);
 }
 
+/// Draws table separators (vertical lines between columns, horizontal line under header)
+fn draw_table_separators(
+    area: Rect,
+    buf: &mut Buffer,
+    widths: &[u16],
+    heights: &[u16],
+    clip: Clipping,
+) {
+    let separator_style = Style::default().fg(Color::DarkGray);
+    let column_count = widths.len();
+
+    // No separators needed for single-column tables
+    if column_count <= 1 {
+        return;
+    }
+
+    // Calculate x-positions for vertical separators (after each column except the last)
+    // Column spacing is 3: space + separator + space
+    let mut separator_x_positions = Vec::with_capacity(column_count - 1);
+    let mut x = area.x;
+    for (i, &width) in widths.iter().enumerate() {
+        x += width;
+        if i < column_count - 1 {
+            separator_x_positions.push(x + 1); // +1 to center in the 3-char spacing
+            x += 3; // column spacing
+        }
+    }
+
+    // Calculate visible height for separators
+    let visible_height = area.height.min(heights.iter().sum::<u16>() + 1); // +1 for header separator row
+
+    // Determine if header separator is visible based on clipping
+    let header_separator_visible = !matches!(clip, Clipping::Upper | Clipping::Both);
+    let header_height = heights.first().copied().unwrap_or(0);
+
+    // Draw vertical separators
+    for &sep_x in &separator_x_positions {
+        if sep_x >= area.x + area.width {
+            continue; // Don't draw beyond table width
+        }
+        for dy in 0..visible_height {
+            let y = area.y + dy;
+            if y >= area.y + area.height {
+                break;
+            }
+            // Skip the header separator row position for vertical lines (will use ┼ there)
+            if header_separator_visible && dy == header_height {
+                continue;
+            }
+            buf[(sep_x, y)]
+                .set_char('│')
+                .set_style(separator_style);
+        }
+    }
+
+    // Draw horizontal separator under header (if header is visible)
+    if header_separator_visible && header_height > 0 {
+        let sep_y = area.y + header_height;
+        if sep_y < area.y + area.height {
+            let mut x = area.x;
+            for (i, &width) in widths.iter().enumerate() {
+                // Draw horizontal line for this column's width
+                for dx in 0..width {
+                    if x + dx < area.x + area.width {
+                        buf[(x + dx, sep_y)]
+                            .set_char('─')
+                            .set_style(separator_style);
+                    }
+                }
+                x += width;
+
+                // Draw spacing with intersection: ─┼─
+                if i < column_count - 1 {
+                    if x < area.x + area.width {
+                        buf[(x, sep_y)].set_char('─').set_style(separator_style);
+                    }
+                    if x + 1 < area.x + area.width {
+                        buf[(x + 1, sep_y)].set_char('┼').set_style(separator_style);
+                    }
+                    if x + 2 < area.x + area.width {
+                        buf[(x + 2, sep_y)].set_char('─').set_style(separator_style);
+                    }
+                    x += 3; // column spacing
+                }
+            }
+        }
+    }
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "table cell iteration coordinates row/column state that would be awkward to pass between functions"
@@ -538,9 +627,12 @@ fn render_table(
             ),
         )
         .block(Block::default())
-        .column_spacing(1);
+        .column_spacing(3);
 
     table.render(area, buf);
+
+    // Draw table separators
+    draw_table_separators(area, buf, widths, heights, clip);
 }
 
 fn render_task(
