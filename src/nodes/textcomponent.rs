@@ -792,7 +792,10 @@ fn transform_table(component: &mut TextComponent, width: u16) {
         widths
     };
 
-    let styling_width: u16 = column_count.try_into().expect("column count fits in u16");
+    // Account for column spacing (3 chars: space + separator + space) between columns
+    let styling_width: u16 = (column_count.saturating_sub(1) * 3)
+        .try_into()
+        .expect("styling width fits in u16");
     let unbalanced_cells_width = widths.iter().sum::<u16>();
 
     /////////////////////////////////////
