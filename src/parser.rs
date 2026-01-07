@@ -748,4 +748,78 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_ordered_list_with_blank_lines() {
+        // CommonMark allows blank lines between list items
+        let content = "1. First item\n\n2. Second item\n\n3. Third item";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component with 3 items
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        // The list should have 3 rows (one per item)
+        let list = list_components[0];
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 3, "List should have 3 items");
+
+        // Verify the numbers are sequential: 1., 2., 3.
+        // The ListMarker words contain the formatted numbers after transform
+        for (i, row) in content_rows.iter().enumerate() {
+            let marker = row
+                .iter()
+                .find(|w| w.kind() == WordType::ListMarker)
+                .expect("Each row should have a list marker");
+            assert_eq!(
+                marker.content(),
+                format!("{}. ", i + 1),
+                "Item {} should be numbered {}",
+                i,
+                i + 1
+            );
+        }
+    }
+
+    #[test]
+    fn test_nested_list_indentation() {
+        // Nested lists should preserve indentation
+        let content = "- Item 1\n  - Nested 1\n  - Nested 2\n- Item 2";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        let list = list_components[0];
+
+        // Check meta_info for indentation - these are MetaInfo(Other) with whitespace content
+        // The transform_list function filters by content().trim() == ""
+        let indent_words: Vec<_> = list
+            .meta_info()
+            .iter()
+            .filter(|w| w.content().trim().is_empty())
+            .collect();
+
+        // We should have 4 indent entries (one per list item)
+        assert_eq!(indent_words.len(), 4, "Should have 4 indent entries");
+
+        // First item: no indent (empty string)
+        assert_eq!(indent_words[0].content(), "", "First item should have no indent");
+        // Nested items: 2 spaces indent
+        assert_eq!(indent_words[1].content(), "  ", "Nested item 1 should have 2-space indent");
+        assert_eq!(indent_words[2].content(), "  ", "Nested item 2 should have 2-space indent");
+        // Back to top level: no indent
+        assert_eq!(indent_words[3].content(), "", "Item 2 should have no indent");
+    }
 }
