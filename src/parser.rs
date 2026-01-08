@@ -658,7 +658,49 @@ impl From<Rule> for MdParseEnum {
             | Rule::s_char
             | Rule::WHITESPACE_S
             | Rule::wiki_link
-            | Rule::footnote_ref_container => todo!(),
+            | Rule::footnote_ref_container
+            | Rule::blank_line => todo!(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ordered_list_with_blank_lines() {
+        // CommonMark allows blank lines between list items
+        let content = "1. First item\n\n2. Second item\n\n3. Third item";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component with 3 items
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        // The list should have 3 rows (one per item)
+        let list = list_components[0];
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 3, "List should have 3 items");
+
+        // Verify the numbers are sequential: 1., 2., 3.
+        for (i, row) in content_rows.iter().enumerate() {
+            let marker = row
+                .iter()
+                .find(|w| w.kind() == WordType::ListMarker)
+                .expect("Each row should have a list marker");
+            assert_eq!(
+                marker.content(),
+                format!("{}. ", i + 1),
+                "Item {} should be numbered {}",
+                i,
+                i + 1
+            );
         }
     }
 }

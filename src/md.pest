@@ -56,6 +56,7 @@ forbidden_sentence_prefix = {
 }
 
 // Lines
+blank_line  = _{ NEWLINE ~ WHITESPACE_S* ~ NEWLINE }
 alt_text    = { WHITESPACE_S* ~ alt_word+ }
 bold        = { NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "**" ~ (bold_word | (NEWLINE ~ quote_prefix?))+ ~ "**" }
 bold_italic = {
@@ -114,7 +115,7 @@ quote_marking = _{ WHITESPACE_S* ~ (important | note | tip | warning | caution) 
 
 // Blocks
 heading             = { (h1 | h2 | h3 | h4 | h5 | h6) }
-list_container      = { (NEWLINE? ~ !comment ~ (u_list | o_list))+ }
+list_container      = { ((blank_line | NEWLINE)* ~ !comment ~ (u_list | o_list))+ }
 paragraph           = { sentence+ }
 indented_code_block = {
     indented_code_line ~ (indented_code_line | (indented_code_newline ~ indented_code_line))+ ~ (!(NEWLINE ~ ("    " | "\t")) ~ NEWLINE)?
