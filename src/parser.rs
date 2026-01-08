@@ -352,7 +352,7 @@ fn parse_component(parse_node: ParseNode) -> Component {
         MdParseEnum::Table => {
             let mut words = Vec::new();
             for cell in parse_node.children_owned() {
-                if cell.kind() == MdParseEnum::TableSeperator {
+                if cell.kind() == MdParseEnum::TableSeparator {
                     words.push(vec![Word::new(
                         cell.content().to_owned(),
                         WordType::MetaInfo(MetaData::ColumnsCount),
@@ -391,11 +391,11 @@ fn parse_component(parse_node: ParseNode) -> Component {
             ))
         }
 
-        MdParseEnum::BlockSeperator => {
+        MdParseEnum::BlockSeparator => {
             Component::TextComponent(TextComponent::new(TextNode::LineBreak, Vec::new()))
         }
-        MdParseEnum::HorizontalSeperator => Component::TextComponent(TextComponent::new(
-            TextNode::HorizontalSeperator,
+        MdParseEnum::HorizontalSeparator => Component::TextComponent(TextComponent::new(
+            TextNode::HorizontalSeparator,
             Vec::new(),
         )),
         MdParseEnum::Footnote => {
@@ -566,7 +566,7 @@ impl ParseNode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MdParseEnum {
     AltText,
-    BlockSeperator,
+    BlockSeparator,
     Bold,
     BoldItalic,
     BoldItalicStr,
@@ -581,7 +581,7 @@ pub enum MdParseEnum {
     FootnoteRef,
     Footnote,
     Heading,
-    HorizontalSeperator,
+    HorizontalSeparator,
     Image,
     Imortant,
     Indent,
@@ -601,7 +601,7 @@ pub enum MdParseEnum {
     StrikethroughStr,
     Table,
     TableCell,
-    TableSeperator,
+    TableSeparator,
     Task,
     TaskClosed,
     TaskOpen,
@@ -640,7 +640,7 @@ impl From<Rule> for MdParseEnum {
             }
             Rule::sentence | Rule::t_sentence | Rule::footnote_sentence => Self::Sentence,
             Rule::table_cell => Self::TableCell,
-            Rule::table_seperator => Self::TableSeperator,
+            Rule::table_separator => Self::TableSeparator,
             Rule::u_list => Self::UnorderedList,
             Rule::o_list => Self::OrderedList,
             Rule::h1 | Rule::h2 | Rule::h3 | Rule::h4 | Rule::h5 | Rule::h6 | Rule::heading => {
@@ -651,8 +651,8 @@ impl From<Rule> for MdParseEnum {
             Rule::table => Self::Table,
             Rule::quote => Self::Quote,
             Rule::task => Self::Task,
-            Rule::block_sep => Self::BlockSeperator,
-            Rule::horizontal_sep => Self::HorizontalSeperator,
+            Rule::block_sep => Self::BlockSeparator,
+            Rule::horizontal_sep => Self::HorizontalSeparator,
             Rule::link_data | Rule::wiki_link_data => Self::LinkData,
             Rule::warning => Self::Warning,
             Rule::note => Self::Note,

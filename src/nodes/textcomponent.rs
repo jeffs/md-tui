@@ -26,7 +26,7 @@ pub enum TextNode {
     Table(Vec<u16>, Vec<u16>),
     CodeBlock,
     Quote,
-    HorizontalSeperator,
+    HorizontalSeparator,
 }
 
 #[derive(Debug, Clone)]
@@ -319,7 +319,7 @@ impl TextComponent {
 
     pub fn transform(&mut self, width: u16) {
         match self.kind {
-            TextNode::Heading | TextNode::LineBreak | TextNode::HorizontalSeperator => {
+            TextNode::Heading | TextNode::LineBreak | TextNode::HorizontalSeparator => {
                 self.height = 1;
             }
             TextNode::List => {
