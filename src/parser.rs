@@ -872,4 +872,5 @@ mod tests {
         // Heading has "## " prefix, then same structure as paragraph
         assert_eq!(&heading_words[1..], &para_words[..]);
     }
+
 }

@@ -316,13 +316,40 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
         return;
     }
 
-    // Word mode, or Flex/Fuzz mode with multi-word query: phrase matching
+    // Flex/Fuzz mode with multi-word query: substring matching on joined window
+    if matches!(search_style, SearchStyle::Flex | SearchStyle::Fuzz) {
+        let case_sensitive = query.chars().any(char::is_uppercase);
+        let query_normalized = if case_sensitive {
+            query.to_owned()
+        } else {
+            query.to_lowercase()
+        };
+
+        windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
+            let mut words = window.iter().map(|c| c.content()).join("");
+
+            words = if case_sensitive {
+                words
+            } else {
+                words.to_lowercase()
+            };
+
+            if words.contains(&query_normalized) {
+                for word in window.iter_mut() {
+                    word.set_kind(WordType::Selected);
+                }
+            }
+        });
+        return;
+    }
+
+    // Word mode: exact phrase matching
     windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
         let mut words = window.iter().map(|c| c.content()).join("");
         let case_sensitive = query.chars().any(char::is_uppercase);
 
         words = if case_sensitive {
-            words.clone()
+            words
         } else {
             words.to_lowercase()
         };
