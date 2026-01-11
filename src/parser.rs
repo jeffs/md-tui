@@ -826,28 +826,50 @@ mod tests {
     #[test]
     fn test_heading_with_inline_code() {
         let content = "## Type Assertions (`as`) vs Type Guards";
-        eprintln!("Input: {:?}", content);
-
         let root = parse_markdown(None, content, 80);
-        eprintln!("Parsed {} components", root.components().len());
 
-        for (i, comp) in root.components().iter().enumerate() {
-            eprintln!("\nComponent {}: {:?}", i, comp.kind());
-            for (j, row) in comp.content().iter().enumerate() {
-                for (k, word) in row.iter().enumerate() {
-                    eprintln!(
-                        "  Row {} Word {}: {:?} (kind: {:?})",
-                        j,
-                        k,
-                        word.content(),
-                        word.kind()
-                    );
-                }
-            }
-        }
-
-        // Should parse as a single heading
+        // Should parse as a single heading (not split at backticks)
         assert_eq!(root.components().len(), 1, "Should have exactly 1 component");
-        assert_eq!(root.components()[0].kind(), TextNode::Heading, "Should be a heading");
+        assert_eq!(
+            root.components()[0].kind(),
+            TextNode::Heading,
+            "Should be a heading"
+        );
+
+        // Should contain the inline code word
+        let words: Vec<_> = root.components()[0]
+            .content()
+            .iter()
+            .flatten()
+            .collect();
+        let has_code_word = words.iter().any(|w| w.kind() == WordType::Code);
+        assert!(has_code_word, "Heading should contain inline code");
+    }
+
+    #[test]
+    fn test_heading_word_structure_matches_paragraph() {
+        // Heading words should be structured like paragraph words
+        // (spaces as separate words) for search to work correctly
+        let heading = "## I know";
+        let paragraph = "I know";
+
+        let heading_root = parse_markdown(None, heading, 80);
+        let para_root = parse_markdown(None, paragraph, 80);
+
+        let heading_words: Vec<_> = heading_root.components()[0]
+            .content()
+            .iter()
+            .flatten()
+            .map(|w| w.content())
+            .collect();
+        let para_words: Vec<_> = para_root.components()[0]
+            .content()
+            .iter()
+            .flatten()
+            .map(|w| w.content())
+            .collect();
+
+        // Heading has "## " prefix, then same structure as paragraph
+        assert_eq!(&heading_words[1..], &para_words[..]);
     }
 }
