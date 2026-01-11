@@ -822,4 +822,32 @@ mod tests {
         // Back to top level: no indent
         assert_eq!(indent_words[3].content(), "", "Item 2 should have no indent");
     }
+
+    #[test]
+    fn test_heading_with_inline_code() {
+        let content = "## Type Assertions (`as`) vs Type Guards";
+        eprintln!("Input: {:?}", content);
+
+        let root = parse_markdown(None, content, 80);
+        eprintln!("Parsed {} components", root.components().len());
+
+        for (i, comp) in root.components().iter().enumerate() {
+            eprintln!("\nComponent {}: {:?}", i, comp.kind());
+            for (j, row) in comp.content().iter().enumerate() {
+                for (k, word) in row.iter().enumerate() {
+                    eprintln!(
+                        "  Row {} Word {}: {:?} (kind: {:?})",
+                        j,
+                        k,
+                        word.content(),
+                        word.kind()
+                    );
+                }
+            }
+        }
+
+        // Should parse as a single heading
+        assert_eq!(root.components().len(), 1, "Should have exactly 1 component");
+        assert_eq!(root.components()[0].kind(), TextNode::Heading, "Should be a heading");
+    }
 }
