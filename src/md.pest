@@ -48,7 +48,7 @@ task_prefix       = _{ task_open | task_complete }
 quote_prefix      = _{ ">" }
 code_block_prefix =  { "```" | "~~~" }
 table_prefix      =  { "|" }
-list_prefix       =  { (WHITESPACE_S* ~ "-") | (NUMBER+ ~ ". ") }
+list_prefix       =  { (WHITESPACE_S* ~ ("-" | "*")) | (NUMBER+ ~ ". ") }
 heading_prefix    =  { "#" }
 
 horizontal_sep_prefix = { "---" }
@@ -61,9 +61,9 @@ forbidden_sentence_prefix = {
 
 // Lines
 alt_text    = { WHITESPACE_S* ~ alt_word+ }
-bold        = { NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "**" ~ (bold_word | (NEWLINE ~ quote_prefix?))+ ~ "**" }
+bold        = { NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "**" ~ !WHITESPACE_S ~ (bold_word | (NEWLINE ~ quote_prefix?))+ ~ "**" }
 bold_italic = {
-    (NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "***" ~ (bold_italic_word | (NEWLINE ~ (quote_prefix ~ WHITESPACE_S)?))+ ~ "***")
+    (NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "***" ~ !WHITESPACE_S ~ (bold_italic_word | (NEWLINE ~ (quote_prefix ~ WHITESPACE_S)?))+ ~ "***")
   | ((NEWLINE | WHITESPACE_S) ~ WHITESPACE_S* ~ !"\\" ~ "_**" ~ (bold_italic_word | (NEWLINE ~ quote_prefix?))+ ~ "**_")
 }
 
@@ -85,7 +85,7 @@ strikethrough         =  { NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "~~" ~ !"~" ~ (str
 t_normal              = _{ t_word+ }
 
 italic = {
-    (NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "*" ~ (italic_word | (NEWLINE ~ quote_prefix?))+ ~ "*")
+    (NEWLINE? ~ WHITESPACE_S* ~ !"\\" ~ "*" ~ !WHITESPACE_S ~ (italic_word | (NEWLINE ~ quote_prefix?))+ ~ "*")
   | ((NEWLINE | WHITESPACE_S) ~ WHITESPACE_S* ~ !"\\" ~ "_" ~ (italic_word | (NEWLINE ~ quote_prefix?))+ ~ "_")
 }
 

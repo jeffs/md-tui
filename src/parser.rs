@@ -847,6 +847,123 @@ mod tests {
     }
 
     #[test]
+    fn test_list_without_preceding_blank_line() {
+        // Test that lists work without a blank line before them (common in LLM output)
+        let content = "Some text
+- first item
+- second item";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should have a paragraph and a list
+        let paragraph_count = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::Paragraph)
+            .count();
+        let list_count = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .count();
+
+        assert_eq!(paragraph_count, 1, "Should have 1 paragraph");
+        assert_eq!(list_count, 1, "Should have 1 list");
+
+        // List should have 2 items
+        let list = components
+            .iter()
+            .find(|c| c.kind() == TextNode::List)
+            .unwrap();
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 2, "List should have 2 items");
+    }
+
+    #[test]
+    fn test_ordered_list_without_preceding_blank_line() {
+        // Test numbered lists without blank lines (common in LLM output)
+        let content = "Here are the steps:
+1. First step
+2. Second step
+3. Third step";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should have at least a paragraph and a list
+        let paragraph_count = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::Paragraph)
+            .count();
+        let list_count = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .count();
+
+        assert_eq!(paragraph_count, 1, "Should have 1 paragraph");
+        assert_eq!(list_count, 1, "Should have 1 list");
+
+        // List should have 3 items
+        let list = components
+            .iter()
+            .find(|c| c.kind() == TextNode::List)
+            .unwrap();
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 3, "List should have 3 items");
+    }
+
+    #[test]
+    fn test_asterisk_list_without_preceding_blank_line() {
+        // Test asterisk lists without blank lines
+        let content = "Items:
+* apple
+* banana";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should have paragraph, linebreak, and list
+        let list_count = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .count();
+
+        assert_eq!(list_count, 1, "Should have 1 list");
+
+        // List should have 2 items
+        let list = components
+            .iter()
+            .find(|c| c.kind() == TextNode::List)
+            .unwrap();
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 2, "List should have 2 items");
+    }
+
+    #[test]
+    fn test_emphasis_still_works_after_list_fix() {
+        // Ensure the !WHITESPACE_S fix for lists doesn't break emphasis
+        let content = "This is *italic* and **bold** text.";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should be a single paragraph
+        assert_eq!(components.len(), 1, "Should have 1 component");
+        assert_eq!(
+            components[0].kind(),
+            TextNode::Paragraph,
+            "Should be a paragraph"
+        );
+
+        // Should contain italic and bold words
+        let words: Vec<_> = components[0].content().iter().flatten().collect();
+        let has_italic = words.iter().any(|w| w.kind() == WordType::Italic);
+        let has_bold = words.iter().any(|w| w.kind() == WordType::Bold);
+
+        assert!(has_italic, "Should contain italic text");
+        assert!(has_bold, "Should contain bold text");
+    }
+
+    #[test]
     fn test_heading_word_structure_matches_paragraph() {
         // Heading words should be structured like paragraph words
         // (spaces as separate words) for search to work correctly
