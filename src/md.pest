@@ -48,7 +48,7 @@ task_prefix       = _{ task_open | task_complete }
 quote_prefix      = _{ ">" }
 code_block_prefix =  { "```" | "~~~" }
 table_prefix      =  { "|" }
-list_prefix       =  { (WHITESPACE_S* ~ ("-" | "*")) | (NUMBER+ ~ ". ") }
+list_prefix       =  { (WHITESPACE_S* ~ ("-" | "*" | "+")) | (NUMBER+ ~ ". ") }
 heading_prefix    =  { "#" }
 
 horizontal_sep_prefix = { "---" }
@@ -96,7 +96,7 @@ footnote_sentence = _{ ((":" | (NEWLINE ~ "  ")) ~ WHITESPACE_S* ~ (latex | code
 table_cell      = { !table_separator ~ "|" ~ WHITESPACE_S* ~ t_sentence* ~ WHITESPACE_S* ~ ("|" ~ " "* ~ NEWLINE)? }
 table_separator = { ("|"? ~ (WHITESPACE_S | ":")* ~ "-"+ ~ (WHITESPACE_S | ":")* ~ "|") }
 
-u_list = { indent ~ ("-" | "*") ~ WHITESPACE_S ~ sentence+ }
+u_list = { indent ~ ("-" | "*" | "+") ~ WHITESPACE_S ~ sentence+ }
 o_list = { indent ~ o_list_counter ~ sentence+ }
 
 // Headings

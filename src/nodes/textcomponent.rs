@@ -628,6 +628,14 @@ fn transform_list(component: &mut TextComponent, width: u16) {
 
                         extra_indent = 1; // Ordered list is longer than unordered and needs extra space
                     } else {
+                        // Use different bullet markers for each nesting level
+                        let bullet = match o_list_counter_stack.len() {
+                            1 => "• ",  // Level 1: bullet
+                            2 => "◦ ",  // Level 2: white bullet
+                            3 => "▪ ",  // Level 3: black small square
+                            _ => "▫ ",  // Level 4+: white small square
+                        };
+                        word.set_content(bullet.to_owned());
                         extra_indent = 0;
                     }
                     tmp = meta.content().len();

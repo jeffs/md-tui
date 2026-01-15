@@ -824,6 +824,210 @@ mod tests {
     }
 
     #[test]
+    fn test_four_level_nested_list() {
+        // Test 4 levels of nesting - each level indented by 2 spaces
+        let content = "- Level 1
+  - Level 2
+    - Level 3
+      - Level 4
+      - Level 4 again
+    - Level 3 again
+  - Level 2 again
+- Level 1 again";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        let list = list_components[0];
+
+        // Check indent entries - should have 8 items total
+        let indent_words: Vec<_> = list
+            .meta_info()
+            .iter()
+            .filter(|w| w.content().trim().is_empty())
+            .collect();
+
+        assert_eq!(indent_words.len(), 8, "Should have 8 indent entries");
+
+        // Verify indentation levels (each level = 2 spaces)
+        assert_eq!(indent_words[0].content(), "", "Level 1 = no indent");
+        assert_eq!(indent_words[1].content(), "  ", "Level 2 = 2 spaces");
+        assert_eq!(indent_words[2].content(), "    ", "Level 3 = 4 spaces");
+        assert_eq!(indent_words[3].content(), "      ", "Level 4 = 6 spaces");
+        assert_eq!(indent_words[4].content(), "      ", "Level 4 again = 6 spaces");
+        assert_eq!(indent_words[5].content(), "    ", "Level 3 again = 4 spaces");
+        assert_eq!(indent_words[6].content(), "  ", "Level 2 again = 2 spaces");
+        assert_eq!(indent_words[7].content(), "", "Level 1 again = no indent");
+
+        // Verify rendering produces 8 non-empty lines
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 8, "List should render 8 items");
+
+        // Verify distinct bullet markers at each level
+        let markers: Vec<_> = content_rows
+            .iter()
+            .filter_map(|row| {
+                row.iter()
+                    .find(|w| w.kind() == WordType::ListMarker)
+                    .map(|w| w.content().to_string())
+            })
+            .collect();
+
+        assert_eq!(markers[0], "• ", "Level 1 uses bullet");
+        assert_eq!(markers[1], "◦ ", "Level 2 uses white bullet");
+        assert_eq!(markers[2], "▪ ", "Level 3 uses black square");
+        assert_eq!(markers[3], "▫ ", "Level 4 uses white square");
+        assert_eq!(markers[4], "▫ ", "Level 4 uses white square");
+        assert_eq!(markers[5], "▪ ", "Level 3 uses black square");
+        assert_eq!(markers[6], "◦ ", "Level 2 uses white bullet");
+        assert_eq!(markers[7], "• ", "Level 1 uses bullet");
+    }
+
+    #[test]
+    fn test_four_level_ordered_list() {
+        // Test 4 levels of ordered list nesting
+        let content = "1. Level 1
+   1. Level 2
+      1. Level 3
+         1. Level 4
+         2. Level 4 again
+      2. Level 3 again
+   2. Level 2 again
+2. Level 1 again";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        let list = list_components[0];
+
+        // Verify rendering produces 8 non-empty lines
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 8, "List should render 8 items");
+
+        // Verify counter reset at each nesting level (each level restarts at 1)
+        let markers: Vec<_> = content_rows
+            .iter()
+            .filter_map(|row| {
+                row.iter()
+                    .find(|w| w.kind() == WordType::ListMarker)
+                    .map(|w| w.content().to_string())
+            })
+            .collect();
+
+        assert_eq!(markers[0], "1. ", "Level 1 first item");
+        assert_eq!(markers[1], "1. ", "Level 2 first item (reset)");
+        assert_eq!(markers[2], "1. ", "Level 3 first item (reset)");
+        assert_eq!(markers[3], "1. ", "Level 4 first item (reset)");
+        assert_eq!(markers[4], "2. ", "Level 4 second item");
+        assert_eq!(markers[5], "2. ", "Level 3 second item");
+        assert_eq!(markers[6], "2. ", "Level 2 second item");
+        assert_eq!(markers[7], "2. ", "Level 1 second item");
+    }
+
+    #[test]
+    fn test_four_level_mixed_list() {
+        // Test 4 levels with mixed ordered/unordered lists
+        let content = "- Unordered L1
+  1. Ordered L2
+     - Unordered L3
+       1. Ordered L4
+       2. Another L4
+     - Another L3
+  2. Another L2
+- Another L1";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        let list = list_components[0];
+
+        // Verify rendering produces 8 non-empty lines
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 8, "List should render 8 items");
+
+        // Verify correct markers for mixed list
+        let markers: Vec<_> = content_rows
+            .iter()
+            .filter_map(|row| {
+                row.iter()
+                    .find(|w| w.kind() == WordType::ListMarker)
+                    .map(|w| w.content().to_string())
+            })
+            .collect();
+
+        // Level 1 unordered, level 2 ordered, level 3 unordered, level 4 ordered
+        assert_eq!(markers[0], "• ", "L1 unordered bullet");
+        assert_eq!(markers[1], "1. ", "L2 ordered number");
+        assert_eq!(markers[2], "▪ ", "L3 unordered (level 3 bullet)");
+        assert_eq!(markers[3], "1. ", "L4 ordered number");
+        assert_eq!(markers[4], "2. ", "L4 ordered number");
+        assert_eq!(markers[5], "▪ ", "L3 unordered (level 3 bullet)");
+        assert_eq!(markers[6], "2. ", "L2 ordered number");
+        assert_eq!(markers[7], "• ", "L1 unordered bullet");
+    }
+
+    #[test]
+    fn test_plus_marker_nested_list() {
+        // Test that +, *, and - all work as list markers (common markdown convention)
+        let content = "- Level 1 dash
+  * Level 2 asterisk
+    + Level 3 plus
+      - Level 4 dash again";
+
+        let root = parse_markdown(None, content, 80);
+        let components = root.components();
+
+        // Should parse as a single List component
+        let list_components: Vec<_> = components
+            .iter()
+            .filter(|c| c.kind() == TextNode::List)
+            .collect();
+        assert_eq!(list_components.len(), 1, "Should have exactly one list");
+
+        let list = list_components[0];
+
+        // Verify rendering produces 4 non-empty lines
+        let content_rows: Vec<_> = list.content().iter().filter(|row| !row.is_empty()).collect();
+        assert_eq!(content_rows.len(), 4, "List should render 4 items");
+
+        // Verify correct bullet markers for each level
+        let markers: Vec<_> = content_rows
+            .iter()
+            .filter_map(|row| {
+                row.iter()
+                    .find(|w| w.kind() == WordType::ListMarker)
+                    .map(|w| w.content().to_string())
+            })
+            .collect();
+
+        assert_eq!(markers[0], "• ", "Level 1 bullet");
+        assert_eq!(markers[1], "◦ ", "Level 2 white bullet");
+        assert_eq!(markers[2], "▪ ", "Level 3 black square");
+        assert_eq!(markers[3], "▫ ", "Level 4 white square");
+    }
+
+    #[test]
     fn test_heading_with_inline_code() {
         let content = "## Type Assertions (`as`) vs Type Guards";
         let root = parse_markdown(None, content, 80);
