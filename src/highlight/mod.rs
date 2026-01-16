@@ -24,6 +24,8 @@ mod lua;
 mod ocaml;
 #[cfg(feature = "tree-sitter-php")]
 mod php;
+#[cfg(feature = "tree-sitter-proto")]
+mod protobuf;
 #[cfg(feature = "tree-sitter-python")]
 mod python;
 #[cfg(feature = "tree-sitter-rust")]
@@ -138,6 +140,11 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
 
         #[cfg(feature = "tree-sitter-php")]
         "php" => HighlightInfo::Highlighted(php::highlight_php(lines).unwrap()),
+
+        #[cfg(feature = "tree-sitter-proto")]
+        "proto" | "protobuf" => {
+            HighlightInfo::Highlighted(protobuf::highlight_protobuf(lines).unwrap())
+        }
 
         #[cfg(feature = "tree-sitter-python")]
         "python" => HighlightInfo::Highlighted(python::highlight_python(lines).unwrap()),
