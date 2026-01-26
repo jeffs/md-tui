@@ -178,6 +178,21 @@ impl TextComponent {
         self.offset
     }
 
+    /// Returns true if this is a List starting with indented content.
+    ///
+    /// Used to detect subitems that belong to a preceding Task.
+    #[must_use]
+    pub fn is_indented_list(&self) -> bool {
+        if self.kind != TextNode::List {
+            return false;
+        }
+        // First meta_info word with empty trim is the indent; check if non-empty
+        self.meta_info
+            .iter()
+            .find(|w| w.content().trim().is_empty())
+            .is_some_and(|w| !w.content().is_empty())
+    }
+
     #[must_use]
     pub fn scroll_offset(&self) -> u16 {
         self.scroll_offset
