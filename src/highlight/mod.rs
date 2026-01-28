@@ -32,6 +32,8 @@ mod python;
 mod rust;
 #[cfg(feature = "tree-sitter-scala")]
 mod scala;
+#[cfg(feature = "tree-sitter-toml-ng")]
+mod toml;
 #[cfg(feature = "tree-sitter-typescript")]
 mod tsx;
 #[cfg(feature = "tree-sitter-typescript")]
@@ -154,6 +156,9 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
 
         #[cfg(feature = "tree-sitter-scala")]
         "scala" => HighlightInfo::Highlighted(scala::highlight_scala(lines).unwrap()),
+
+        #[cfg(feature = "tree-sitter-toml-ng")]
+        "toml" => HighlightInfo::Highlighted(toml::highlight_toml(lines).unwrap()),
 
         #[cfg(feature = "tree-sitter-typescript")]
         "tsx" => HighlightInfo::Highlighted(tsx::highlight_tsx(lines).unwrap()),

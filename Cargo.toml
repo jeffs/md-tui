@@ -36,6 +36,7 @@ tree-sitter = [
   "tree-sitter-python",
   "tree-sitter-rust",
   "tree-sitter-scala",
+  "tree-sitter-toml-ng",
   "tree-sitter-typescript",
   "tree-sitter-yaml",
   "tree-sitter-diff"
@@ -77,6 +78,7 @@ tree-sitter-proto = { git = "https://github.com/coder3101/tree-sitter-proto", op
 tree-sitter-python = { version = "0.25.0", optional = true }
 tree-sitter-rust = { version = "0.24.0", optional = true }
 tree-sitter-scala = { version = "0.24.0", optional = true }
+tree-sitter-toml-ng = { version = "0.7.0", optional = true }
 tree-sitter-typescript = { version = "0.23.2", optional = true }
 tree-sitter-yaml = { version = "0.7.2", optional = true }
 tree-sitter-diff = { version = "0.1.0", optional = true }
