@@ -254,10 +254,25 @@ fn render_heading(area: Rect, buf: &mut Buffer, component: &TextComponent) {
         .map(|c| style_heading(c, indent))
         .collect();
 
+    // Calculate content width to determine alignment strategy.
+    // When text is wider than area and center-aligned, ratatui may write past
+    // the buffer boundary. Fall back to left alignment for long headings.
+    let content_width: usize = content.iter().map(|s| s.content.len()).sum();
+
     let paragraph = match indent {
-        1 => Paragraph::new(Line::from(content))
-            .block(Block::default().style(Style::default().bg(color_config().heading_bg_color)))
-            .alignment(Alignment::Center),
+        1 if content_width <= usize::from(area.width) => {
+            Paragraph::new(Line::from(content))
+                .block(
+                    Block::default().style(Style::default().bg(color_config().heading_bg_color)),
+                )
+                .alignment(Alignment::Center)
+        }
+        1 => {
+            // Content too wide for centering; use left alignment to avoid overflow
+            Paragraph::new(Line::from(content)).block(
+                Block::default().style(Style::default().bg(color_config().heading_bg_color)),
+            )
+        }
         _ => Paragraph::new(Line::from(content)),
     };
 
@@ -703,8 +718,11 @@ fn render_task(
 }
 
 fn render_horizontal_separator(area: Rect, buf: &mut Buffer) {
+    // Use the smaller of configured width and actual area width to avoid
+    // writing past the buffer boundary.
+    let separator_width = cmp::min(GENERAL_CONFIG.width, area.width);
     let paragraph = Paragraph::new(Line::from(vec![Span::raw(
-        "\u{2014}".repeat(GENERAL_CONFIG.width.into()),
+        "\u{2014}".repeat(separator_width.into()),
     )]));
 
     paragraph.render(area, buf);

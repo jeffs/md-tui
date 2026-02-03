@@ -5,7 +5,7 @@ use std::{
     panic,
     sync::mpsc,
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use md_tui::event_handler::{KeyBoardAction, handle_keyboard_input};
@@ -44,9 +44,8 @@ fn main() {
     let mut terminal = ratatui::init();
 
     // create app and run it
-    let tick_rate = Duration::from_millis(100);
     let app = App::default();
-    let res = run_app(&mut terminal, app, tick_rate);
+    let res = run_app(&mut terminal, app);
 
     // restore terminal
     ratatui::restore();
@@ -60,7 +59,8 @@ fn main() {
     clippy::too_many_lines,
     reason = "event loop must coordinate terminal, file watcher, and UI state in one place"
 )]
-fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
+fn run_app(terminal: &mut DefaultTerminal, mut app: App) -> io::Result<()> {
+    let timeout = Duration::from_secs(1);
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     // Determine starting paths for file tree search
@@ -72,8 +72,6 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
 
     let (f_tx, f_rx) = mpsc::channel::<Option<MdFile>>();
     thread::spawn(move || find_md_files_channel(f_tx, starting_paths));
-
-    let mut last_tick = Instant::now();
 
     let (tx, rx) = mpsc::channel();
 
@@ -112,6 +110,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
     }
 
     let mut file_tree = FileTree::default();
+    let mut needs_redraw = true;
 
     loop {
         let height = terminal.size()?.height;
@@ -131,94 +130,85 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                         app.vertical_scroll,
                         markdown.height().saturating_sub(height / 2),
                     );
+                    needs_redraw = true;
                 }
 
                 break;
             }
         }
-        if app.set_width(terminal.size()?.width) {
-            let Some(url) = markdown.file_name() else {
-                app.mode = Mode::FileTree;
-                continue;
-            };
-            let text = if let Ok(file) = read_to_string(url) {
-                app.vertical_scroll = 0;
-                file
-            } else {
-                app.message_box
-                    .set_message(format!("Could not open file {:?}", markdown.file_name()));
-                app.boxes = Boxes::Error;
-                app.mode = Mode::FileTree;
-                continue;
-            };
-            markdown = parse_markdown(markdown.file_name(), &text, app.width() - 2);
+
+        // Check for file tree updates (outside draw closure so we can set needs_redraw)
+        if app.mode == Mode::FileTree && !file_tree.loaded() {
+            while let Ok(e) = f_rx.try_recv() {
+                if let Some(file) = e {
+                    file_tree.add_file(file);
+                    needs_redraw = true;
+                } else {
+                    file_tree = file_tree.clone().finish();
+                    needs_redraw = true;
+                    break;
+                }
+            }
         }
 
-        markdown.set_scroll(app.vertical_scroll);
+        if needs_redraw {
+            markdown.set_scroll(app.vertical_scroll);
 
-        terminal.draw(|f| {
-            match app.mode {
-                Mode::View => {
-                    render_markdown(f, &app, &mut markdown);
-                }
-                Mode::FileTree => {
-                    if !file_tree.loaded() {
-                        while let Ok(e) = f_rx.try_recv() {
-                            if let Some(file) = e {
-                                file_tree.add_file(file);
-                            } else {
-                                file_tree = file_tree.clone().finish();
-                                break;
-                            }
-                        }
+            terminal.draw(|f| {
+                match app.mode {
+                    Mode::View => {
+                        render_markdown(f, &app, &mut markdown);
                     }
-                    render_file_tree(f, &app, file_tree.clone());
+                    Mode::FileTree => {
+                        render_file_tree(f, &app, file_tree.clone());
+                    }
                 }
-            }
-            if app.boxes == Boxes::Search {
-                let (search_height, search_width) = app.search_box.dimensions();
-                let frame_area = f.area();
-                let x = app.search_box.x();
-                let y = app.search_box.y();
-                // Clamp search area to fit within frame bounds
-                let clamped_width = search_width.min(frame_area.width.saturating_sub(x));
-                let clamped_height = search_height.min(frame_area.height.saturating_sub(y));
-                let search_area = Rect {
-                    x,
-                    y,
-                    width: clamped_width,
-                    height: clamped_height,
-                };
-                if clamped_width > 0 && clamped_height > 0 {
-                    f.render_widget(Clear, search_area);
-                    f.render_widget(app.search_box.clone(), search_area);
-                }
-            } else if app.boxes == Boxes::Error {
-                let (error_height, error_width) = app.message_box.dimensions();
-                let error_area = Rect {
-                    x: app.width() / 2 - error_width / 2,
-                    y: height / 2,
-                    width: error_width,
-                    height: error_height,
-                };
+                if app.boxes == Boxes::Search {
+                    let (search_height, search_width) = app.search_box.dimensions();
+                    let frame_area = f.area();
+                    let x = app.search_box.x();
+                    let y = app.search_box.y();
+                    // Clamp search area to fit within frame bounds
+                    let clamped_width = search_width.min(frame_area.width.saturating_sub(x));
+                    let clamped_height = search_height.min(frame_area.height.saturating_sub(y));
+                    let search_area = Rect {
+                        x,
+                        y,
+                        width: clamped_width,
+                        height: clamped_height,
+                    };
+                    if clamped_width > 0 && clamped_height > 0 {
+                        f.render_widget(Clear, search_area);
+                        f.render_widget(app.search_box.clone(), search_area);
+                    }
+                } else if app.boxes == Boxes::Error {
+                    let (error_height, error_width) = app.message_box.dimensions();
+                    let error_area = Rect {
+                        x: app.width() / 2 - error_width / 2,
+                        y: height / 2,
+                        width: error_width,
+                        height: error_height,
+                    };
 
-                if app.width() > error_width {
-                    f.render_widget(Clear, error_area);
-                    f.render_widget(app.message_box.clone(), error_area);
-                }
-            } else if app.boxes == Boxes::LinkPreview {
-                let (link_height, link_width) = app.link_box.dimensions();
-                let link_area = Rect {
-                    x: height / 2,
-                    y: height / 2,
-                    width: link_width,
-                    height: link_height,
-                };
+                    if app.width() > error_width {
+                        f.render_widget(Clear, error_area);
+                        f.render_widget(app.message_box.clone(), error_area);
+                    }
+                } else if app.boxes == Boxes::LinkPreview {
+                    let (link_height, link_width) = app.link_box.dimensions();
+                    let link_area = Rect {
+                        x: height / 2,
+                        y: height / 2,
+                        width: link_width,
+                        height: link_height,
+                    };
 
-                f.render_widget(Clear, link_area);
-                f.render_widget(app.link_box.clone(), link_area);
-            }
-        })?;
+                    f.render_widget(Clear, link_area);
+                    f.render_widget(app.link_box.clone(), link_area);
+                }
+            })?;
+            needs_redraw = false;
+        }
 
         // Exit early if no markdown files found after file discovery completes
         if file_tree.loaded() && file_tree.all_files().is_empty() && app.mode == Mode::FileTree {
@@ -228,34 +218,53 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             ));
         }
 
-        let timeout = tick_rate
-            .checked_sub(last_tick.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
-
-        if event::poll(timeout)?
-            && let Event::Key(key) = event::read()?
-        {
-            match handle_keyboard_input(
-                key,
-                &mut app,
-                &mut markdown,
-                &mut file_tree,
-                height,
-                &mut watcher,
-            ) {
-                KeyBoardAction::Exit => {
-                    return Ok(());
+        if event::poll(timeout)? {
+            match event::read()? {
+                Event::Key(key) => {
+                    match handle_keyboard_input(
+                        key,
+                        &mut app,
+                        &mut markdown,
+                        &mut file_tree,
+                        height,
+                        &mut watcher,
+                    ) {
+                        KeyBoardAction::Exit => {
+                            return Ok(());
+                        }
+                        KeyBoardAction::Continue => {}
+                        KeyBoardAction::Edit => {
+                            terminal.draw(|f| {
+                                open_editor(f, &mut app, markdown.file_name());
+                            })?;
+                        }
+                    }
+                    needs_redraw = true;
                 }
-                KeyBoardAction::Continue => {}
-                KeyBoardAction::Edit => {
-                    terminal.draw(|f| {
-                        open_editor(f, &mut app, markdown.file_name());
-                    })?;
+                Event::Resize(width, _height) => {
+                    if app.set_width(width) {
+                        let Some(url) = markdown.file_name() else {
+                            app.mode = Mode::FileTree;
+                            needs_redraw = true;
+                            continue;
+                        };
+                        let text = if let Ok(file) = read_to_string(url) {
+                            app.vertical_scroll = 0;
+                            file
+                        } else {
+                            app.message_box
+                                .set_message(format!("Could not open file {:?}", markdown.file_name()));
+                            app.boxes = Boxes::Error;
+                            app.mode = Mode::FileTree;
+                            needs_redraw = true;
+                            continue;
+                        };
+                        markdown = parse_markdown(markdown.file_name(), &text, app.width() - 2);
+                    }
+                    needs_redraw = true;
                 }
+                _ => {}
             }
-        }
-        if last_tick.elapsed() >= tick_rate {
-            last_tick = Instant::now();
         }
     }
 }
@@ -274,9 +283,14 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
             if x > 2 { x } else { 2 }
         }
     };
+    // Calculate desired width, then clamp to fit within frame bounds
+    let desired_width = app.width().saturating_sub(3);
+    let max_width = size.width.saturating_sub(x);
+    let width = cmp::min(desired_width, max_width);
+
     let area = Rect {
         x,
-        width: app.width() - 3,
+        width,
         ..size
     };
     f.render_widget(file_tree, area);
@@ -286,19 +300,23 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
         return;
     }
 
+    let help_x = x + 2;
+    let help_max_width = size.width.saturating_sub(help_x);
+    let help_width = cmp::min(app.width().saturating_sub(5), help_max_width);
+
     let area = if app.help_box.expanded() {
         Rect {
-            x: x + 2,
+            x: help_x,
             y: size.height.saturating_sub(14),
             height: cmp::min(13, size.height),
-            width: app.width().saturating_sub(5),
+            width: help_width,
         }
     } else {
         Rect {
-            x: x + 2,
+            x: help_x,
             y: size.height.saturating_sub(4),
             height: cmp::min(3, size.height),
-            width: app.width() - 5,
+            width: help_width,
         }
     };
 
@@ -306,23 +324,27 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
 
     let area = if app.help_box.expanded() {
         Rect {
-            x: x + 2,
+            x: help_x,
             y: size.height.saturating_sub(13),
             height: cmp::min(10, size.height),
-            width: app.width().saturating_sub(5),
+            width: help_width,
         }
     } else {
         Rect {
-            x: x + 2,
+            x: help_x,
             y: size.height.saturating_sub(5),
             height: cmp::min(3, size.height),
-            width: app.width() - 5,
+            width: help_width,
         }
     };
 
     f.render_widget(app.help_box, area);
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "rendering logic with help box variants requires coordinating multiple Rect calculations"
+)]
 fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
     let size = f.area();
 
@@ -346,8 +368,13 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
         size.height
     };
 
+    // Calculate desired width, then clamp to fit within frame bounds
+    let desired_width = app.width().saturating_sub(3);
+    let max_width = size.width.saturating_sub(x);
+    let width = cmp::min(desired_width, max_width);
+
     let area = Rect {
-        width: app.width() - 3,
+        width,
         height: content_height,
         x,
         ..size
@@ -425,19 +452,23 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
 
     f.render_widget(block, area);
 
+    let help_x = x + 2;
+    let help_max_width = size.width.saturating_sub(help_x);
+    let help_width = cmp::min(app.width().saturating_sub(5), help_max_width);
+
     let area = if app.help_box.expanded() {
         Rect {
-            x: x + 2,
+            x: help_x,
             y: size.height.saturating_sub(18),
             height: cmp::min(16, size.height),
-            width: app.width() - 5,
+            width: help_width,
         }
     } else {
         Rect {
-            x: x + 2,
+            x: help_x,
             y: size.height.saturating_sub(3),
             height: cmp::min(3, size.height),
-            width: app.width() - 5,
+            width: help_width,
         }
     };
 
