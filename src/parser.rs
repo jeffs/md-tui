@@ -458,7 +458,13 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
     }
 
     if node.children().is_empty() {
-        leaf_nodes.push(node);
+        // Container nodes (e.g. BoldStr, ItalicStr) should always have
+        // children. If a grammar edge case produces one without children,
+        // drop it rather than letting it reach WordType::from() which
+        // would panic.
+        if !node.kind().is_container() {
+            leaf_nodes.push(node);
+        }
     } else {
         for child in node.children_owned() {
             leaf_nodes.append(&mut get_leaf_nodes(child));
@@ -610,6 +616,34 @@ pub enum MdParseEnum {
     Warning,
     WikiLink,
     Word,
+}
+
+impl MdParseEnum {
+    /// Returns true for node types that are structural containers and
+    /// must always have children. A childless container is a degenerate
+    /// parse artifact and should be dropped rather than treated as a
+    /// leaf.
+    fn is_container(self) -> bool {
+        matches!(
+            self,
+            Self::Heading
+                | Self::BoldItalicStr
+                | Self::BoldStr
+                | Self::CodeBlock
+                | Self::CodeStr
+                | Self::Image
+                | Self::ItalicStr
+                | Self::ListContainer
+                | Self::OrderedList
+                | Self::StrikethroughStr
+                | Self::Footnote
+                | Self::Table
+                | Self::TableCell
+                | Self::Task
+                | Self::UnorderedList
+                | Self::TableSeparator
+        )
+    }
 }
 
 impl From<Rule> for MdParseEnum {
@@ -1194,4 +1228,46 @@ mod tests {
         assert_eq!(&heading_words[1..], &para_words[..]);
     }
 
+    #[test]
+    fn test_childless_bold_no_panic() {
+        // A bold node whose inner content is only newlines produces a
+        // BoldStr parse node with no children (NEWLINE is a silent
+        // rule in pest). Before the fix, this would hit unreachable!()
+        // in From<MdParseEnum> for WordType.
+        //
+        // The pest grammar: bold = { ... "**" ~ !WHITESPACE_S ~
+        //   (bold_word | (NEWLINE ~ quote_prefix?))+ ~ "**" }
+        // If only the NEWLINE alternative matches, there are no
+        // visible children.
+        let content = "some text **\n** after";
+        // Should not panic
+        let _root = parse_markdown(None, content, 80);
+    }
+
+    #[test]
+    fn test_llms_full_no_panic() {
+        // Regression test: var/llms-full.txt triggered an
+        // unreachable!() panic on childless BoldStr nodes.
+        let content = std::fs::read_to_string("var/llms-full.txt");
+        if let Ok(content) = content {
+            let _root = parse_markdown(None, &content, 80);
+        }
+    }
+
+    #[test]
+    fn test_childless_container_variants_no_panic() {
+        // Various inputs that might produce childless container nodes
+        // through grammar edge cases. None should panic.
+        let inputs = [
+            "**\n**",
+            "***\n***",
+            "*\n*",
+            "~~\n~~",
+            "text **\n** more",
+            "text ***\n*** more",
+        ];
+        for input in &inputs {
+            let _root = parse_markdown(None, input, 80);
+        }
+    }
 }
