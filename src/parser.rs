@@ -9,11 +9,14 @@ use pest::{
 use pest_derive::Parser;
 use ratatui::style::Color;
 
-use crate::nodes::{
-    image::ImageComponent,
-    root::{Component, ComponentRoot},
-    textcomponent::{TextComponent, TextNode},
-    word::{MetaData, Word, WordType},
+use crate::{
+    nodes::{
+        image::ImageComponent,
+        root::{Component, ComponentRoot},
+        textcomponent::{TextComponent, TextNode},
+        word::{MetaData, Word, WordType},
+    },
+    util::custom::{CUSTOM_CONFIG, Flavor},
 };
 
 /// Process-wide monotonic counter for assigning unique IDs to `<details>`
@@ -75,10 +78,16 @@ fn parse_text(pair: Pair<'_, Rule>) -> ParseNode {
             .lines()
             .take_while(|line| line.trim().is_empty())
             .count();
-    let content = if pair.as_rule() == Rule::code_line {
-        pair.as_str().replace('\t', "    ").replace('\r', "")
+    let rule = pair.as_rule();
+    let raw = pair.as_str();
+    let content = if rule == Rule::code_line {
+        raw.replace('\t', "    ").replace('\r', "")
+    } else if CUSTOM_CONFIG.flavor == Flavor::Claude {
+        // Claude flavor: preserve newlines as hard line breaks
+        raw.replace('\r', "")
     } else {
-        pair.as_str().replace('\n', " ")
+        // CommonMark: collapse newlines to spaces for text reflow
+        raw.replace('\n', " ")
     };
     let mut component = ParseNode::new_at_line(pair.as_rule().into(), content, source_line);
     let children = parse_node_children(pair.into_inner());
@@ -525,19 +534,28 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
         leaf_nodes.push(comp);
     }
 
-    if node.children().is_empty() {
-        // Formatting containers (italic/bold/code/strikethrough) with no named
-        // children arise when the grammar matches only silent content — e.g.
-        // bare newlines between asterisks in CRLF documents.  Nothing to
-        // render; skip so WordType::from is never called on a container type.
-        if !matches!(
+    // For Claude flavor: preserve leading newlines in formatted text
+    if CUSTOM_CONFIG.flavor == Flavor::Claude
+        && matches!(
             node.kind(),
-            MdParseEnum::ItalicStr
+            MdParseEnum::CodeStr
+                | MdParseEnum::ItalicStr
                 | MdParseEnum::BoldStr
                 | MdParseEnum::BoldItalicStr
                 | MdParseEnum::StrikethroughStr
-                | MdParseEnum::CodeStr
-        ) {
+        )
+        && node.content().starts_with('\n')
+    {
+        let comp = ParseNode::new(MdParseEnum::Word, "\n".to_owned());
+        leaf_nodes.push(comp);
+    }
+
+    if node.children().is_empty() {
+        // Container nodes (e.g. BoldStr, ItalicStr) should always
+        // have children. If a grammar edge case produces one without
+        // children, drop it rather than letting it reach
+        // WordType::from() which would panic.
+        if !node.kind().is_container() {
             leaf_nodes.push(node);
         }
     } else {
@@ -707,6 +725,33 @@ pub enum MdParseEnum {
     Warning,
     WikiLink,
     Word,
+}
+
+impl MdParseEnum {
+    /// Returns true for node types that are structural containers
+    /// and must always have children. A childless container is a
+    /// degenerate parse artifact and should be dropped.
+    fn is_container(self) -> bool {
+        matches!(
+            self,
+            Self::Heading
+                | Self::BoldItalicStr
+                | Self::BoldStr
+                | Self::CodeBlock
+                | Self::CodeStr
+                | Self::Image
+                | Self::ItalicStr
+                | Self::ListContainer
+                | Self::OrderedList
+                | Self::StrikethroughStr
+                | Self::Footnote
+                | Self::Table
+                | Self::TableCell
+                | Self::Task
+                | Self::UnorderedList
+                | Self::TableSeparator
+        )
+    }
 }
 
 impl From<Rule> for MdParseEnum {
