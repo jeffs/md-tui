@@ -1,7 +1,143 @@
-use std::sync::LazyLock;
+use std::{fmt, sync::LazyLock};
 
-use config::{Config, Environment, File};
-use crossterm::event::KeyCode;
+use config::{Config, Environment, File, Value, ValueKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+/// Represents a single key binding with optional modifiers
+#[derive(Debug, Clone, PartialEq)]
+pub struct KeyBinding {
+    pub key: KeyCode,
+    pub modifiers: KeyModifiers,
+}
+
+impl KeyBinding {
+    /// Create a new `KeyBinding` from a character (no modifiers)
+    #[must_use]
+    pub fn from_char(c: char) -> Self {
+        Self {
+            key: KeyCode::Char(c),
+            modifiers: KeyModifiers::NONE,
+        }
+    }
+
+    /// Check if this binding matches a `KeyEvent`
+    #[must_use]
+    pub fn matches(&self, event: &KeyEvent) -> bool {
+        if self.key != event.code {
+            return false;
+        }
+        // Mask out SHIFT when checking modifiers (terminals may
+        // report Ctrl+Shift for some keys)
+        let event_mods = event.modifiers & !KeyModifiers::SHIFT;
+        let self_mods = self.modifiers & !KeyModifiers::SHIFT;
+        event_mods == self_mods
+    }
+}
+
+impl fmt::Display for KeyBinding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.modifiers.contains(KeyModifiers::CONTROL) {
+            write!(f, "C-")?;
+        }
+        match self.key {
+            KeyCode::Char(' ') => write!(f, "space"),
+            KeyCode::Char(c) => write!(f, "{c}"),
+            KeyCode::Tab => write!(f, "tab"),
+            KeyCode::Enter => write!(f, "enter"),
+            KeyCode::Esc => write!(f, "esc"),
+            KeyCode::Backspace => write!(f, "backspace"),
+            _ => write!(f, "?"),
+        }
+    }
+}
+
+/// Format a slice of bindings for display (shows first only)
+#[must_use]
+pub fn format_bindings(bindings: &[KeyBinding]) -> String {
+    bindings
+        .first()
+        .map_or_else(|| "?".to_string(), ToString::to_string)
+}
+
+/// Parse a key string like "k", "space", "C-e" into a KeyBinding
+fn parse_key_string(s: &str) -> Option<KeyBinding> {
+    let s = s.trim();
+    if s.is_empty() {
+        return None;
+    }
+
+    let (has_ctrl, key_part) =
+        if s.len() >= 2 && s[..2].eq_ignore_ascii_case("c-") {
+            (true, &s[2..])
+        } else {
+            (false, s)
+        };
+
+    let modifiers = if has_ctrl {
+        KeyModifiers::CONTROL
+    } else {
+        KeyModifiers::NONE
+    };
+
+    let key = match key_part.to_lowercase().as_str() {
+        "space" | " " => KeyCode::Char(' '),
+        "tab" => KeyCode::Tab,
+        "enter" => KeyCode::Enter,
+        "esc" | "escape" => KeyCode::Esc,
+        "backspace" => KeyCode::Backspace,
+        _ => {
+            let chars: Vec<char> = key_part.chars().collect();
+            if chars.len() == 1 {
+                KeyCode::Char(chars[0])
+            } else {
+                return None;
+            }
+        }
+    };
+
+    Some(KeyBinding { key, modifiers })
+}
+
+/// Parse config value (string or array) into Vec<KeyBinding>
+fn parse_bindings(value: &Value, default: char) -> Vec<KeyBinding> {
+    match &value.kind {
+        ValueKind::String(s) => parse_key_string(s)
+            .map_or_else(
+                || vec![KeyBinding::from_char(default)],
+                |kb| vec![kb],
+            ),
+        ValueKind::Array(arr) => {
+            let bindings: Vec<KeyBinding> = arr
+                .iter()
+                .filter_map(|v| {
+                    if let ValueKind::String(s) = &v.kind {
+                        parse_key_string(s)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            if bindings.is_empty() {
+                vec![KeyBinding::from_char(default)]
+            } else {
+                bindings
+            }
+        }
+        _ => vec![KeyBinding::from_char(default)],
+    }
+}
+
+/// Get bindings from config with a default char
+fn get_bindings(
+    settings: &Config,
+    key: &str,
+    default: char,
+) -> Vec<KeyBinding> {
+    settings.get::<Value>(key).map_or_else(
+        |_| vec![KeyBinding::from_char(default)],
+        |v| parse_bindings(&v, default),
+    )
+}
 
 pub enum Action {
     Up,
@@ -30,147 +166,145 @@ pub enum Action {
 
 #[derive(Debug)]
 pub struct KeyConfig {
-    pub up: char,
-    pub down: char,
-    pub page_up: char,
-    pub page_down: char,
-    pub half_page_up: char,
-    pub half_page_down: char,
-    pub search: char,
-    pub search_next: char,
-    pub search_previous: char,
-    pub select_link: char,
-    pub select_link_alt: char,
-    pub edit: char,
-    pub hover: char,
-    pub top: char,
-    pub bottom: char,
-    pub back: char,
-    pub file_tree: char,
-    pub sort: char,
+    pub up: Vec<KeyBinding>,
+    pub down: Vec<KeyBinding>,
+    pub page_up: Vec<KeyBinding>,
+    pub page_down: Vec<KeyBinding>,
+    pub half_page_up: Vec<KeyBinding>,
+    pub half_page_down: Vec<KeyBinding>,
+    pub search: Vec<KeyBinding>,
+    pub search_next: Vec<KeyBinding>,
+    pub search_previous: Vec<KeyBinding>,
+    pub select_link: Vec<KeyBinding>,
+    pub select_link_alt: Vec<KeyBinding>,
+    pub edit: Vec<KeyBinding>,
+    pub hover: Vec<KeyBinding>,
+    pub top: Vec<KeyBinding>,
+    pub bottom: Vec<KeyBinding>,
+    pub back: Vec<KeyBinding>,
+    pub file_tree: Vec<KeyBinding>,
+    pub sort: Vec<KeyBinding>,
+}
+
+fn matches_any(bindings: &[KeyBinding], event: &KeyEvent) -> bool {
+    bindings.iter().any(|b| b.matches(event))
 }
 
 #[must_use]
-pub fn key_to_action(key: KeyCode) -> Action {
-    match key {
-        KeyCode::Char(c) => {
-            if c == KEY_CONFIG.up {
-                return Action::Up;
-            }
-
-            if c == KEY_CONFIG.down {
-                return Action::Down;
-            }
-
-            if c == KEY_CONFIG.page_up {
-                return Action::PageUp;
-            }
-
-            if c == KEY_CONFIG.page_down {
-                return Action::PageDown;
-            }
-
-            if c == KEY_CONFIG.half_page_up {
-                return Action::HalfPageUp;
-            }
-
-            if c == KEY_CONFIG.half_page_down {
-                return Action::HalfPageDown;
-            }
-
-            if c == KEY_CONFIG.search || c == '/' {
-                return Action::Search;
-            }
-
-            if c == KEY_CONFIG.select_link {
-                return Action::SelectLink;
-            }
-
-            if c == KEY_CONFIG.select_link_alt {
-                return Action::SelectLinkAlt;
-            }
-
-            if c == KEY_CONFIG.search_next {
-                return Action::SearchNext;
-            }
-
-            if c == KEY_CONFIG.search_previous {
-                return Action::SearchPrevious;
-            }
-
-            if c == KEY_CONFIG.edit {
-                return Action::Edit;
-            }
-
-            if c == KEY_CONFIG.hover {
-                return Action::Hover;
-            }
-
-            if c == KEY_CONFIG.top {
-                return Action::ToTop;
-            }
-
-            if c == KEY_CONFIG.bottom {
-                return Action::ToBottom;
-            }
-
-            if c == KEY_CONFIG.back {
-                return Action::Back;
-            }
-
-            if c == KEY_CONFIG.file_tree {
-                return Action::ToFileTree;
-            }
-
-            if c == KEY_CONFIG.sort {
-                return Action::Sort;
-            }
-
-            if c == '?' {
-                return Action::Help;
-            }
-
-            Action::None
-        }
-        KeyCode::Up => Action::Up,
-        KeyCode::Down => Action::Down,
-        KeyCode::PageUp => Action::PageUp,
-        KeyCode::PageDown => Action::PageDown,
-        KeyCode::Right => Action::PageDown,
-        KeyCode::Left => Action::PageUp,
-        KeyCode::Enter => Action::Enter,
-        KeyCode::Esc => Action::Escape,
-        _ => Action::None,
+pub fn key_to_action(event: &KeyEvent) -> Action {
+    // Hardcoded keys (arrow keys, etc.)
+    match event.code {
+        KeyCode::Up => return Action::Up,
+        KeyCode::Down => return Action::Down,
+        KeyCode::PageUp | KeyCode::Left => return Action::PageUp,
+        KeyCode::PageDown | KeyCode::Right => return Action::PageDown,
+        KeyCode::Enter => return Action::Enter,
+        KeyCode::Esc => return Action::Escape,
+        _ => {}
     }
+
+    // Configurable bindings
+    if matches_any(&KEY_CONFIG.up, event) {
+        return Action::Up;
+    }
+    if matches_any(&KEY_CONFIG.down, event) {
+        return Action::Down;
+    }
+    if matches_any(&KEY_CONFIG.page_up, event) {
+        return Action::PageUp;
+    }
+    if matches_any(&KEY_CONFIG.page_down, event) {
+        return Action::PageDown;
+    }
+    if matches_any(&KEY_CONFIG.half_page_up, event) {
+        return Action::HalfPageUp;
+    }
+    if matches_any(&KEY_CONFIG.half_page_down, event) {
+        return Action::HalfPageDown;
+    }
+    if matches_any(&KEY_CONFIG.search, event) {
+        return Action::Search;
+    }
+    if event.code == KeyCode::Char('/')
+        && event.modifiers == KeyModifiers::NONE
+    {
+        return Action::Search;
+    }
+    if matches_any(&KEY_CONFIG.select_link, event) {
+        return Action::SelectLink;
+    }
+    if matches_any(&KEY_CONFIG.select_link_alt, event) {
+        return Action::SelectLinkAlt;
+    }
+    if matches_any(&KEY_CONFIG.search_next, event) {
+        return Action::SearchNext;
+    }
+    if matches_any(&KEY_CONFIG.search_previous, event) {
+        return Action::SearchPrevious;
+    }
+    if matches_any(&KEY_CONFIG.edit, event) {
+        return Action::Edit;
+    }
+    if matches_any(&KEY_CONFIG.hover, event) {
+        return Action::Hover;
+    }
+    if matches_any(&KEY_CONFIG.top, event) {
+        return Action::ToTop;
+    }
+    if matches_any(&KEY_CONFIG.bottom, event) {
+        return Action::ToBottom;
+    }
+    if matches_any(&KEY_CONFIG.back, event) {
+        return Action::Back;
+    }
+    if matches_any(&KEY_CONFIG.file_tree, event) {
+        return Action::ToFileTree;
+    }
+    if matches_any(&KEY_CONFIG.sort, event) {
+        return Action::Sort;
+    }
+    if event.code == KeyCode::Char('?')
+        && event.modifiers == KeyModifiers::NONE
+    {
+        return Action::Help;
+    }
+
+    Action::None
 }
 
 pub static KEY_CONFIG: LazyLock<KeyConfig> = LazyLock::new(|| {
     let config_dir = dirs::home_dir().unwrap();
-    let config_file = config_dir.join(".config").join("mdt").join("config.toml");
+    let config_file = config_dir
+        .join(".config")
+        .join("mdt")
+        .join("config.toml");
     let settings = Config::builder()
-        .add_source(File::with_name(config_file.to_str().unwrap()).required(false))
+        .add_source(
+            File::with_name(config_file.to_str().unwrap())
+                .required(false),
+        )
         .add_source(Environment::with_prefix("MDT").separator("_"))
         .build()
         .unwrap();
 
     KeyConfig {
-        up: settings.get::<char>("up").unwrap_or('k'),
-        down: settings.get::<char>("down").unwrap_or('j'),
-        page_up: settings.get::<char>("page_up").unwrap_or('u'),
-        page_down: settings.get::<char>("page_down").unwrap_or('d'),
-        half_page_up: settings.get::<char>("half_page_up").unwrap_or('h'),
-        half_page_down: settings.get::<char>("half_page_down").unwrap_or('l'),
-        search: settings.get::<char>("search").unwrap_or('f'),
-        select_link: settings.get::<char>("select_link").unwrap_or('s'),
-        select_link_alt: settings.get::<char>("select_link_alt").unwrap_or('S'),
-        search_next: settings.get::<char>("search_next").unwrap_or('n'),
-        search_previous: settings.get::<char>("search_previous").unwrap_or('N'),
-        edit: settings.get::<char>("edit").unwrap_or('e'),
-        hover: settings.get::<char>("hover").unwrap_or('K'),
-        top: settings.get::<char>("top").unwrap_or('g'),
-        bottom: settings.get::<char>("bottom").unwrap_or('G'),
-        back: settings.get::<char>("back").unwrap_or('b'),
-        file_tree: settings.get::<char>("file_tree").unwrap_or('t'),
-        sort: settings.get::<char>("sort").unwrap_or('o'),
+        up: get_bindings(&settings, "up", 'k'),
+        down: get_bindings(&settings, "down", 'j'),
+        page_up: get_bindings(&settings, "page_up", 'u'),
+        page_down: get_bindings(&settings, "page_down", 'd'),
+        half_page_up: get_bindings(&settings, "half_page_up", 'h'),
+        half_page_down: get_bindings(&settings, "half_page_down", 'l'),
+        search: get_bindings(&settings, "search", 'f'),
+        select_link: get_bindings(&settings, "select_link", 's'),
+        select_link_alt: get_bindings(&settings, "select_link_alt", 'S'),
+        search_next: get_bindings(&settings, "search_next", 'n'),
+        search_previous: get_bindings(&settings, "search_previous", 'N'),
+        edit: get_bindings(&settings, "edit", 'e'),
+        hover: get_bindings(&settings, "hover", 'K'),
+        top: get_bindings(&settings, "top", 'g'),
+        bottom: get_bindings(&settings, "bottom", 'G'),
+        back: get_bindings(&settings, "back", 'b'),
+        file_tree: get_bindings(&settings, "file_tree", 't'),
+        sort: get_bindings(&settings, "sort", 'o'),
     }
 });
