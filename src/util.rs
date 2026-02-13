@@ -62,6 +62,7 @@ pub struct App {
     pub help_box: HelpBox,
     pub link_box: LinkBox,
     pub theme: themes::ThemeChooser,
+    pub direct_file: bool,
 }
 
 impl App {
