@@ -123,6 +123,20 @@ impl TextComponent {
         self.kind.clone()
     }
 
+    /// Returns true if this is an indented (sub-item) list.
+    #[must_use]
+    pub fn is_indented_list(&self) -> bool {
+        if self.kind != TextNode::List {
+            return false;
+        }
+        // First meta_info word with empty trim is the indent;
+        // check if non-empty (meaning it has whitespace = indented)
+        self.meta_info
+            .iter()
+            .find(|w| w.content().trim().is_empty())
+            .is_some_and(|w| !w.content().is_empty())
+    }
+
     #[must_use]
     pub fn content(&self) -> &Vec<Vec<Word>> {
         &self.content
@@ -141,6 +155,9 @@ impl TextComponent {
     pub fn content_as_lines(&self) -> Vec<String> {
         if let TextNode::Table(widths, _) = self.kind() {
             let column_count = widths.len();
+            if column_count == 0 {
+                return Vec::new();
+            }
 
             // Malformed tables have no columns (see `transform_table`) and
             // `chunks` panics on a chunk size of zero

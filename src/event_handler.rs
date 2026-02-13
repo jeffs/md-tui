@@ -29,7 +29,19 @@ pub fn handle_keyboard_input(
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     if key.code == KeyCode::Char('q') && app.boxes != Boxes::Search {
-        return KeyBoardAction::Exit;
+        match app.mode {
+            Mode::FileTree => return KeyBoardAction::Exit,
+            Mode::View if app.direct_file => return KeyBoardAction::Exit,
+            Mode::View => {
+                app.mode = Mode::FileTree;
+                app.help_box.set_mode(Mode::FileTree);
+                if let Some(file) = markdown.file_name() {
+                    app.history.push(Jump::File(file.to_string()));
+                }
+                app.reset();
+                return KeyBoardAction::Continue;
+            }
+        }
     }
     match app.mode {
         Mode::FileTree => keyboard_mode_file_tree(key, app, markdown, file_tree, height, watcher),
