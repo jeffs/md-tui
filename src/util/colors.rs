@@ -56,11 +56,11 @@ pub fn read_color_config_from_file() -> ColorConfig {
         heading_bg_color: Color::from_str(
             &settings.get::<String>("h_bg_color").unwrap_or_default(),
         )
-        .unwrap_or(Color::Blue),
+        .unwrap_or(Color::Reset),
         heading_fg_color: Color::from_str(
             &settings.get::<String>("h_fg_color").unwrap_or_default(),
         )
-        .unwrap_or(Color::Black),
+        .unwrap_or(Color::Cyan),
         italic_color: Color::from_str(&settings.get::<String>("italic_color").unwrap_or_default())
             .unwrap_or(Color::Reset),
         bold_color: Color::from_str(&settings.get::<String>("bold_color").unwrap_or_default())
