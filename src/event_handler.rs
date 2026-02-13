@@ -1,6 +1,6 @@
 use std::{cmp, fs::read_to_string};
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEvent};
 use notify::{PollWatcher, Watcher};
 
 use crate::{
@@ -22,7 +22,7 @@ pub enum KeyBoardAction {
 }
 
 pub fn handle_keyboard_input(
-    key: KeyCode,
+    key: &KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     file_tree: &mut FileTree,
@@ -30,13 +30,13 @@ pub fn handle_keyboard_input(
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     if app.theme.open {
-        return if app.theme.key(key) {
+        return if app.theme.key(key.code) {
             KeyBoardAction::ThemeChanged
         } else {
             KeyBoardAction::Continue
         };
     }
-    if key == KeyCode::Char('q') && app.boxes != Boxes::Search {
+    if key.code == KeyCode::Char('q') && app.boxes != Boxes::Search {
         return KeyBoardAction::Exit;
     }
     match app.mode {
@@ -46,7 +46,7 @@ pub fn handle_keyboard_input(
 }
 
 pub fn keyboard_mode_file_tree(
-    key: KeyCode,
+    key: &KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     file_tree: &mut FileTree,
@@ -56,13 +56,13 @@ pub fn keyboard_mode_file_tree(
     let header_height = u16::from(GENERAL_CONFIG.file_tree_directory_header);
     let height = height.saturating_sub(header_height);
     match app.boxes {
-        Boxes::Error => match key {
+        Boxes::Error => match key.code {
             KeyCode::Enter | KeyCode::Esc => {
                 app.boxes = Boxes::None;
             }
             _ => {}
         },
-        Boxes::Search => match key {
+        Boxes::Search => match key.code {
             KeyCode::Esc => {
                 app.search_box.clear();
                 file_tree.search(None);
@@ -196,7 +196,7 @@ pub fn keyboard_mode_file_tree(
             _ => {}
         },
         Boxes::LinkPreview => {
-            if key == KeyCode::Esc {
+            if key.code == KeyCode::Esc {
                 app.boxes = Boxes::None;
             }
         }
@@ -206,20 +206,20 @@ pub fn keyboard_mode_file_tree(
 }
 
 fn keyboard_mode_view(
-    key: KeyCode,
+    key: &KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     height: u16,
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     match app.boxes {
-        Boxes::Error => match key {
+        Boxes::Error => match key.code {
             KeyCode::Enter | KeyCode::Esc => {
                 app.boxes = Boxes::None;
             }
             _ => {}
         },
-        Boxes::Search => match key {
+        Boxes::Search => match key.code {
             KeyCode::Esc => {
                 app.search_box.clear();
                 app.boxes = Boxes::None;
@@ -653,7 +653,7 @@ fn keyboard_mode_view(
             _ => {}
         },
         Boxes::LinkPreview => {
-            if key == KeyCode::Esc {
+            if key.code == KeyCode::Esc {
                 app.boxes = Boxes::None;
             }
         }
