@@ -48,6 +48,117 @@ pub static COLOR_MAP: [Color; 18] = [
     Color::Reset,
 ];
 
+// tree-sitter-proto doesn't export HIGHLIGHTS_QUERY; embedded from
+// https://github.com/coder3101/tree-sitter-proto/blob/main/queries/highlights.scm
+#[cfg(feature = "tree-sitter-proto")]
+const PROTO_HIGHLIGHTS_QUERY: &str = r#"
+[
+  "syntax"
+  "edition"
+  "package"
+  "option"
+  "import"
+  "service"
+  "rpc"
+  "returns"
+  "message"
+  "enum"
+  "oneof"
+  "repeated"
+  "reserved"
+  "to"
+] @keyword
+
+[
+  (key_type)
+  (type)
+  (message_name)
+  (enum_name)
+  (service_name)
+  (rpc_name)
+]@type
+
+(string) @string
+
+[
+  (int_lit)
+  (float_lit)
+] @constant
+
+[
+  (true)
+  (false)
+] @constant
+
+(comment) @property
+
+[
+  "("
+  ")"
+  "["
+  "]"
+  "{"
+  "}"
+]  @punctuation.bracket
+"#;
+
+// tree-sitter-toml-ng's built-in query uses @boolean/@number/@comment which
+// don't map to HIGHLIGHT_NAMES; this version remaps them to equivalents that do.
+// Embedded from https://github.com/tree-sitter-grammars/tree-sitter-toml/blob/master/queries/highlights.scm
+#[cfg(feature = "tree-sitter-toml-ng")]
+const TOML_HIGHLIGHTS_QUERY: &str = r#"
+; Properties
+
+(bare_key) @type
+
+(quoted_key) @string
+
+(pair
+  (bare_key)) @property
+
+(pair
+  (dotted_key
+    (bare_key) @property))
+
+; Literals
+
+(boolean) @constant
+
+(comment) @property
+
+(string) @string
+
+[
+  (integer)
+  (float)
+] @constant
+
+[
+  (offset_date_time)
+  (local_date_time)
+  (local_date)
+  (local_time)
+] @string.special
+
+; Punctuation
+
+[
+  "."
+  ","
+] @punctuation.delimiter
+
+"=" @operator
+
+[
+  "["
+  "]"
+  "[["
+  "]]"
+  "{"
+  "}"
+] @punctuation.bracket
+"#;
+
 #[derive(Debug)]
 pub enum HighlightInfo {
     Highlighted(Vec<HighlightEvent>),
@@ -164,6 +275,14 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
             tree_sitter_lua::HIGHLIGHTS_QUERY,
         ),
 
+        #[cfg(feature = "tree-sitter-nu")]
+        "nu" | "nushell" => highlight_with_language(
+            lines,
+            tree_sitter_nu::LANGUAGE.into(),
+            "nu",
+            tree_sitter_nu::HIGHLIGHTS_QUERY,
+        ),
+
         #[cfg(feature = "tree-sitter-ocaml")]
         "ocaml" => highlight_with_language(
             lines,
@@ -178,6 +297,14 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
             tree_sitter_php::LANGUAGE_PHP.into(),
             "php",
             tree_sitter_php::HIGHLIGHTS_QUERY,
+        ),
+
+        #[cfg(feature = "tree-sitter-proto")]
+        "proto" | "protobuf" => highlight_with_language(
+            lines,
+            tree_sitter_proto::LANGUAGE.into(),
+            "protobuf",
+            PROTO_HIGHLIGHTS_QUERY,
         ),
 
         #[cfg(feature = "tree-sitter-python")]
@@ -202,6 +329,14 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
             tree_sitter_scala::LANGUAGE.into(),
             "scala",
             tree_sitter_scala::HIGHLIGHTS_QUERY,
+        ),
+
+        #[cfg(feature = "tree-sitter-toml-ng")]
+        "toml" => highlight_with_language(
+            lines,
+            tree_sitter_toml_ng::LANGUAGE.into(),
+            "toml",
+            TOML_HIGHLIGHTS_QUERY,
         ),
 
         #[cfg(feature = "tree-sitter-typescript")]
@@ -301,6 +436,42 @@ mod tests {
     fn test_highlight_tsx() {
         let code = b"const x = <div>hello</div>;";
         let result = highlight_code("tsx", code);
+        if let HighlightInfo::Highlighted(events) = result {
+            assert!(!events.is_empty());
+        } else {
+            panic!("Expected Highlighted, got {:?}", result);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "tree-sitter-nu")]
+    fn test_highlight_nu() {
+        let code = b"let x = 1";
+        let result = highlight_code("nu", code);
+        if let HighlightInfo::Highlighted(events) = result {
+            assert!(!events.is_empty());
+        } else {
+            panic!("Expected Highlighted, got {:?}", result);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "tree-sitter-proto")]
+    fn test_highlight_protobuf() {
+        let code = b"syntax = \"proto3\";\nmessage Foo { string bar = 1; }";
+        let result = highlight_code("proto", code);
+        if let HighlightInfo::Highlighted(events) = result {
+            assert!(!events.is_empty());
+        } else {
+            panic!("Expected Highlighted, got {:?}", result);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "tree-sitter-toml-ng")]
+    fn test_highlight_toml() {
+        let code = b"[section]\nkey = \"value\"";
+        let result = highlight_code("toml", code);
         if let HighlightInfo::Highlighted(events) = result {
             assert!(!events.is_empty());
         } else {
