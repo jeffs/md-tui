@@ -62,7 +62,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) -> io::Result<()> {
     let (f_tx, f_rx) = mpsc::channel::<Option<MdFile>>();
 
-    thread::spawn(move || find_md_files_channel(f_tx.clone()));
+    let cli_args: Vec<String> = std::env::args().skip(1).collect();
+    let starting_paths: Vec<std::path::PathBuf> = if cli_args.is_empty() {
+        vec![".".into()]
+    } else {
+        cli_args.iter().map(std::path::PathBuf::from).collect()
+    };
+
+    thread::spawn({
+        let starting_paths = starting_paths.clone();
+        move || find_md_files_channel(f_tx.clone(), starting_paths)
+    });
 
     let mut last_tick = Instant::now();
 
@@ -80,13 +90,15 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
     let potential_input = io::stdin();
     let mut stdin_buf = String::new();
 
-    let args: Vec<String> = std::env::args().collect();
-    if let Some(arg) = args.get(1) {
+    if let Some(arg) = cli_args.first()
+        && std::path::Path::new(arg).is_file()
+    {
         if let Ok(file) = read_to_string(arg) {
             let path = std::path::Path::new(arg);
             let _ = watcher.watch(path, notify::RecursiveMode::NonRecursive);
             markdown = parse_markdown(Some(arg), &file, app.width() - 2);
             app.mode = Mode::View;
+            app.direct_file = true;
         } else {
             app.message_box
                 .set_message(format!("Could not open file {arg}"));
@@ -96,6 +108,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
         let _ = potential_input.lock().read_to_string(&mut stdin_buf);
         markdown = parse_markdown(None, &stdin_buf, app.width() - 2);
         app.mode = Mode::View;
+        app.direct_file = true;
     }
 
     let mut file_tree = FileTree::default();

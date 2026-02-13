@@ -55,6 +55,7 @@ pub struct App {
     pub message_box: ErrorBox,
     pub help_box: HelpBox,
     pub link_box: LinkBox,
+    pub direct_file: bool,
 }
 
 impl App {
