@@ -6,7 +6,7 @@ use strsim::damerau_levenshtein;
 use crate::{
     nodes::word::{Word, WordType},
     pages::file_explorer::{FileTree, MdFile},
-    util::general::GENERAL_CONFIG,
+    util::general::{SearchStyle, GENERAL_CONFIG},
 };
 
 fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
@@ -21,7 +21,10 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
     }
 }
 
-pub fn find_md_files_channel(tx: Sender<Option<MdFile>>) {
+pub fn find_md_files_channel(
+    tx: Sender<Option<MdFile>>,
+    starting_paths: Vec<std::path::PathBuf>,
+) {
     let mut ignored_files = Vec::new();
 
     if GENERAL_CONFIG.gitignore {
@@ -30,7 +33,22 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>) {
 
     let mut stack = VecDeque::new();
 
-    stack.push_back(std::path::PathBuf::from("."));
+    // Process starting paths: files go directly, dirs go to stack
+    for path in starting_paths {
+        if path.is_dir() {
+            stack.push_back(path);
+        } else if path.is_file()
+            && path.extension().unwrap_or_default() == "md"
+            && let (Some(path_str), Some(path_name)) =
+                (path.to_str(), path.file_name())
+        {
+            tx.send(Some(MdFile::new(
+                path_str.to_string(),
+                path_name.to_str().unwrap_or("UNKNOWN").to_string(),
+            )))
+            .unwrap();
+        }
+    }
 
     while let Some(path) = stack.pop_front() {
         for entry in if let Ok(entries) = std::fs::read_dir(&path) {
@@ -277,6 +295,66 @@ pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
         return;
     }
 
+    let search_style = GENERAL_CONFIG.search_style;
+
+    // Flex mode with single-word query: do substring matching
+    if matches!(search_style, SearchStyle::Flex | SearchStyle::Fuzz)
+        && window_size == 1
+    {
+        let case_sensitive = query.chars().any(char::is_uppercase);
+        let query_lower = query.to_lowercase();
+
+        for word in text.iter_mut() {
+            let content = if case_sensitive {
+                word.content().to_owned()
+            } else {
+                word.content().to_lowercase()
+            };
+
+            let search_query =
+                if case_sensitive { query } else { &query_lower };
+
+            if content.contains(search_query) {
+                word.set_kind(WordType::Selected);
+            }
+        }
+        return;
+    }
+
+    // Flex/Fuzz mode with multi-word query: substring matching
+    // on joined window
+    if matches!(search_style, SearchStyle::Flex | SearchStyle::Fuzz) {
+        let case_sensitive = query.chars().any(char::is_uppercase);
+        let query_normalized = if case_sensitive {
+            query.to_owned()
+        } else {
+            query.to_lowercase()
+        };
+
+        windows_mut_for_each(
+            text.as_mut_slice(),
+            window_size,
+            |window| {
+                let mut words =
+                    window.iter().map(|c| c.content()).join("");
+
+                words = if case_sensitive {
+                    words
+                } else {
+                    words.to_lowercase()
+                };
+
+                if words.contains(&query_normalized) {
+                    for word in window.iter_mut() {
+                        word.set_kind(WordType::Selected);
+                    }
+                }
+            },
+        );
+        return;
+    }
+
+    // Word mode: exact phrase matching
     windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
         let mut words = window.iter().map(|c| c.content()).join("");
         let case_sensitive = query.chars().any(char::is_uppercase);
@@ -504,5 +582,16 @@ your markdown notes, or opening external links from someones README.
             .collect::<String>();
 
         assert_eq!(filtered, "Helloworld");
+    }
+
+    #[test]
+    fn tasks_after_heading_parsed_as_task() {
+        let text = "# Heading\n\n- [x] Done task\n- [ ] Open task\n";
+        let root = parse_markdown(None, text, 80);
+        let kinds: Vec<_> = root.components().iter().map(|c| c.kind()).collect();
+        assert!(
+            kinds.contains(&TextNode::Task),
+            "Expected Task component but got: {kinds:?}"
+        );
     }
 }

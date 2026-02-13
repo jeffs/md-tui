@@ -283,10 +283,23 @@ impl ComponentRoot {
                 && kind != TextNode::LineBreak
                 && next.kind() != TextNode::LineBreak
             {
-                components.push(Component::TextComponent(TextComponent::new(
-                    TextNode::LineBreak,
-                    Vec::new(),
-                )));
+                // Don't insert LineBreak between Task and its
+                // indented subitems
+                let is_task_with_subitems = kind == TextNode::Task
+                    && matches!(
+                        next,
+                        Component::TextComponent(tc)
+                            if tc.is_indented_list()
+                    );
+
+                if !is_task_with_subitems {
+                    components.push(Component::TextComponent(
+                        TextComponent::new(
+                            TextNode::LineBreak,
+                            Vec::new(),
+                        ),
+                    ));
+                }
             }
         }
         Self {
