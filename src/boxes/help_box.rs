@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Row, Table, Widget},
 };
 
-use crate::util::{Mode, colors::color_config, keys::KEY_CONFIG};
+use crate::util::{Mode, colors::color_config, keys::{KEY_CONFIG, format_bindings}};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct HelpBox {
@@ -56,31 +56,31 @@ fn render_file_tree_help(expanded: bool, area: Rect, buf: &mut Buffer) {
 
     let key_actions = [
         Row::new(vec![
-            format!("{} or \u{2193}", KEY_CONFIG.down),
+            format!("{} or \u{2193}", format_bindings(&KEY_CONFIG.down)),
             "Move down".to_string(),
         ]),
         Row::new(vec![
-            format!("{} or \u{2191}", KEY_CONFIG.up),
+            format!("{} or \u{2191}", format_bindings(&KEY_CONFIG.up)),
             "Move up".to_string(),
         ]),
         Row::new(vec![
-            format!("{} or \u{2190}", KEY_CONFIG.page_up),
+            format!("{} or \u{2190}", format_bindings(&KEY_CONFIG.page_up)),
             "Go to previous page".to_string(),
         ]),
         Row::new(vec![
-            format!("{} or \u{2192}", KEY_CONFIG.page_down),
+            format!("{} or \u{2192}", format_bindings(&KEY_CONFIG.page_down)),
             "Go to next page".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.top),
+            format_bindings(&KEY_CONFIG.top),
             "Move to first file".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.bottom),
+            format_bindings(&KEY_CONFIG.bottom),
             "Move to last file".to_string(),
         ]),
         Row::new(vec![
-            format!("/ or {}", KEY_CONFIG.search),
+            format!("/ or {}", format_bindings(&KEY_CONFIG.search)),
             "Search".to_string(),
         ]),
         Row::new(vec!["\u{21b5}", "Open file"]),
@@ -105,56 +105,56 @@ fn render_markdown_help(expandend: bool, area: Rect, buf: &mut Buffer) {
 
     let key_actions = [
         Row::new(vec![
-            format!("{} or \u{2193}", KEY_CONFIG.down),
+            format!("{} or \u{2193}", format_bindings(&KEY_CONFIG.down)),
             "Move down".to_string(),
         ]),
         Row::new(vec![
-            format!("{} or \u{2191}", KEY_CONFIG.up),
+            format!("{} or \u{2191}", format_bindings(&KEY_CONFIG.up)),
             "Move up".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.half_page_down),
+            format_bindings(&KEY_CONFIG.half_page_down),
             "Move half page down".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.half_page_up),
+            format_bindings(&KEY_CONFIG.half_page_up),
             "Move half page up".to_string(),
         ]),
         Row::new(vec![
-            format!("{} or \u{2192}", KEY_CONFIG.page_down),
+            format!("{} or \u{2192}", format_bindings(&KEY_CONFIG.page_down)),
             "Move full page down".to_string(),
         ]),
         Row::new(vec![
-            format!("{} or \u{2190}", KEY_CONFIG.page_up),
+            format!("{} or \u{2190}", format_bindings(&KEY_CONFIG.page_up)),
             "Move full page up".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.bottom),
+            format_bindings(&KEY_CONFIG.bottom),
             "Move to bottom".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.top),
+            format_bindings(&KEY_CONFIG.top),
             "Move to top".to_string(),
         ]),
         Row::new(vec![
-            format!("/ or {}", KEY_CONFIG.search),
+            format!("/ or {}", format_bindings(&KEY_CONFIG.search)),
             "Search".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.back),
+            format_bindings(&KEY_CONFIG.back),
             "Go back to previous file".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.file_tree),
+            format_bindings(&KEY_CONFIG.file_tree),
             "To file tree".to_string(),
         ]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.select_link),
+            format_bindings(&KEY_CONFIG.select_link),
             "Enter select mode".to_string(),
         ]),
         Row::new(vec!["\u{21b5}", "Open link/file"]),
         Row::new(vec![
-            format!("{}", KEY_CONFIG.edit),
+            format_bindings(&KEY_CONFIG.edit),
             "Edit file".to_string(),
         ]),
         Row::new(vec!["q", "Quit"]),
