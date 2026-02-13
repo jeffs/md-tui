@@ -26,18 +26,24 @@ mod lua;
 mod ocaml;
 #[cfg(feature = "tree-sitter-php")]
 mod php;
+#[cfg(feature = "tree-sitter-proto")]
+mod protobuf;
 #[cfg(feature = "tree-sitter-python")]
 mod python;
 #[cfg(feature = "tree-sitter-rust")]
 mod rust;
 #[cfg(feature = "tree-sitter-scala")]
 mod scala;
+#[cfg(feature = "tree-sitter-toml-ng")]
+mod toml;
 #[cfg(feature = "tree-sitter-typescript")]
 mod tsx;
 #[cfg(feature = "tree-sitter-typescript")]
 mod typescript;
 #[cfg(feature = "tree-sitter-yaml")]
 mod yaml;
+#[cfg(feature = "tree-sitter-nu")]
+mod nu;
 
 use tree_sitter_highlight::HighlightEvent;
 
@@ -137,6 +143,11 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
         #[cfg(feature = "tree-sitter-php")]
         "php" => HighlightInfo::Highlighted(php::highlight_php(lines).unwrap()),
 
+        #[cfg(feature = "tree-sitter-proto")]
+        "proto" | "protobuf" => {
+            HighlightInfo::Highlighted(protobuf::highlight_protobuf(lines).unwrap())
+        }
+
         #[cfg(feature = "tree-sitter-python")]
         "python" => HighlightInfo::Highlighted(python::highlight_python(lines).unwrap()),
 
@@ -145,6 +156,9 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
 
         #[cfg(feature = "tree-sitter-scala")]
         "scala" => HighlightInfo::Highlighted(scala::highlight_scala(lines).unwrap()),
+
+        #[cfg(feature = "tree-sitter-toml-ng")]
+        "toml" => HighlightInfo::Highlighted(toml::highlight_toml(lines).unwrap()),
 
         #[cfg(feature = "tree-sitter-typescript")]
         "tsx" => HighlightInfo::Highlighted(tsx::highlight_tsx(lines).unwrap()),
@@ -161,6 +175,9 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
         "diff" | "patch" => HighlightInfo::Highlighted(diff::highlight_diff(lines).unwrap()),
 
         "mermaid" => HighlightInfo::Mermaid,
+
+        #[cfg(feature = "tree-sitter-nu")]
+        "nu" | "nushell" => HighlightInfo::Highlighted(nu::highlight_nu(lines).unwrap()),
 
         _ => HighlightInfo::Unhighlighted,
     }
