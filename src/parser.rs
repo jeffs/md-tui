@@ -782,7 +782,10 @@ impl From<Rule> for MdParseEnum {
             | Rule::details_open_tag
             | Rule::details_close_tag
             | Rule::summary_open_tag
-            | Rule::summary_close_tag => todo!(),
+            | Rule::summary_close_tag
+            | Rule::horizontal_sep_prefix
+            | Rule::blank_line
+            | Rule::italic => todo!(),
         }
     }
 }
