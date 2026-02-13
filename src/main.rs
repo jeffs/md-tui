@@ -241,7 +241,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
             let previous_document = markdown.file_name().map(str::to_owned);
             let previous_source_line = markdown.source_line_at_scroll(app.vertical_scroll, height);
             match handle_keyboard_input(
-                key.code,
+                &key,
                 &mut app,
                 &mut markdown,
                 &mut file_tree,
