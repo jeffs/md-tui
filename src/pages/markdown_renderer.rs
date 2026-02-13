@@ -18,6 +18,7 @@ use crate::{
     },
     util::{
         colors::{color_config, heading_colors},
+        custom::CUSTOM_CONFIG,
         general::{GENERAL_CONFIG, HeadingStyle},
     },
 };
@@ -601,13 +602,12 @@ fn render_task(
     clip: Clipping,
     meta_info: &Word,
 ) {
-    const CHECKBOX: &str = "✅ ";
-    const UNCHECKED: &str = "❌ ";
-
     let checkbox = if meta_info.content() == "- [ ] " {
-        UNCHECKED
+        if CUSTOM_CONFIG.emoji_check_marks { "❌ " } else { "[ ] " }
+    } else if CUSTOM_CONFIG.emoji_check_marks {
+        "✅ "
     } else {
-        CHECKBOX
+        "[x] "
     };
 
     let paragraph = Paragraph::new(checkbox);
@@ -659,8 +659,9 @@ fn render_task(
 }
 
 fn render_horizontal_separator(area: Rect, buf: &mut Buffer) {
+    let width = cmp::min(GENERAL_CONFIG.width, area.width);
     let paragraph = Paragraph::new(Line::from(vec![Span::raw(
-        "\u{2014}".repeat(GENERAL_CONFIG.width.into()),
+        "\u{2014}".repeat(width.into()),
     )]));
 
     paragraph.render(area, buf);
