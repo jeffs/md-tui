@@ -188,6 +188,10 @@ impl FileTree {
             }
         }
         self.fill_spacers();
+        // Auto-select first result if any
+        if !self.files.is_empty() {
+            self.list_state.select(Some(0));
+        }
     }
 
     fn fill_spacers(&mut self) {
@@ -294,6 +298,10 @@ impl FileTree {
         self.all_files.push(file.clone());
         self.files.push(MdFileComponent::File(file));
         self.files.push(MdFileComponent::Spacer);
+        // Auto-select first file so there's always a selection
+        if self.all_files.len() == 1 {
+            self.list_state.select(Some(0));
+        }
     }
 
     #[must_use]
