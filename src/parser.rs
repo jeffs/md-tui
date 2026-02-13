@@ -659,7 +659,10 @@ impl From<Rule> for MdParseEnum {
             | Rule::s_char
             | Rule::WHITESPACE_S
             | Rule::wiki_link
-            | Rule::footnote_ref_container => todo!(),
+            | Rule::footnote_ref_container
+            | Rule::horizontal_sep_prefix
+            | Rule::blank_line
+            | Rule::italic => todo!(),
         }
     }
 }
