@@ -6,7 +6,10 @@ use strsim::damerau_levenshtein;
 use crate::{
     nodes::word::{Word, WordType},
     pages::file_explorer::{FileTree, MdFile},
-    util::general::GENERAL_CONFIG,
+    util::{
+        custom::{CUSTOM_CONFIG, SearchStyle},
+        general::GENERAL_CONFIG,
+    },
 };
 
 fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
@@ -21,7 +24,10 @@ fn add_to_gitingore(path: &str, ignored_files: &mut Vec<String>) {
     }
 }
 
-pub fn find_md_files_channel(tx: Sender<Option<MdFile>>) {
+pub fn find_md_files_channel(
+    tx: Sender<Option<MdFile>>,
+    starting_paths: Vec<std::path::PathBuf>,
+) {
     let mut ignored_files = Vec::new();
 
     if GENERAL_CONFIG.gitignore {
@@ -30,7 +36,22 @@ pub fn find_md_files_channel(tx: Sender<Option<MdFile>>) {
 
     let mut stack = VecDeque::new();
 
-    stack.push_back(std::path::PathBuf::from("."));
+    // Process starting paths: files go directly, dirs go to stack
+    for path in starting_paths {
+        if path.is_dir() {
+            stack.push_back(path);
+        } else if path.is_file()
+            && path.extension().unwrap_or_default() == "md"
+            && let (Some(path_str), Some(path_name)) =
+                (path.to_str(), path.file_name())
+        {
+            tx.send(Some(MdFile::new(
+                path_str.to_string(),
+                path_name.to_str().unwrap_or("UNKNOWN").to_string(),
+            )))
+            .unwrap();
+        }
+    }
 
     while let Some(path) = stack.pop_front() {
         for entry in if let Ok(entries) = std::fs::read_dir(&path) {
@@ -248,11 +269,54 @@ pub fn find_with_ref<'a>(query: &str, text: Vec<&'a Word>) -> Vec<&'a Word> {
 }
 
 pub fn find_and_mark<'a>(query: &str, text: &'a mut Vec<&'a mut Word>) {
-    let matches = matching_words(query, text.iter().map(|word| word.content()));
-    text.iter_mut()
-        .zip(matches)
-        .filter(|(_, is_match)| *is_match)
-        .for_each(|(word, _)| word.set_kind(WordType::Selected));
+    if matches!(
+        CUSTOM_CONFIG.search_style,
+        SearchStyle::Flex | SearchStyle::Fuzz
+    ) {
+        let matches = matching_words(query, text.iter().map(|word| word.content()));
+        text.iter_mut()
+            .zip(matches)
+            .filter(|(_, is_match)| *is_match)
+            .for_each(|(word, _)| word.set_kind(WordType::Selected));
+        return;
+    }
+
+    // Word mode: exact phrase matching
+    let window_size = query
+        .split_whitespace()
+        .fold(0usize, |acc, _| acc + 2)
+        .saturating_sub(1);
+
+    if window_size == 0 {
+        return;
+    }
+
+    windows_mut_for_each(text.as_mut_slice(), window_size, |window| {
+        let mut words = window.iter().map(|c| c.content()).join("");
+        let case_sensitive = query.chars().any(char::is_uppercase);
+
+        words = if case_sensitive {
+            words.clone()
+        } else {
+            words.to_lowercase()
+        };
+
+        if damerau_levenshtein(query, &words) == 0 {
+            window
+                .iter_mut()
+                .for_each(|word| word.set_kind(WordType::Selected));
+        }
+    });
+}
+
+fn windows_mut_for_each<T>(v: &mut [T], n: usize, f: impl Fn(&mut [T])) {
+    let mut start = 0;
+    let mut end = n;
+    while end <= v.len() {
+        f(&mut v[start..end]);
+        start += 1;
+        end += 1;
+    }
 }
 
 fn matching_words<'a>(query: &str, text: impl IntoIterator<Item = &'a str>) -> Vec<bool> {
@@ -569,5 +633,16 @@ your markdown notes, or opening external links from someones README.
         markdown.find_and_mark("3");
         assert_eq!(markdown.search_results_heights(), Vec::<usize>::new());
         let _ = markdown.content();
+    }
+
+    #[test]
+    fn tasks_after_heading_parsed_as_task() {
+        let text = "# Heading\n\n- [x] Done task\n- [ ] Open task\n";
+        let root = parse_markdown(None, text, 80);
+        let kinds: Vec<_> = root.components().iter().map(|c| c.kind()).collect();
+        assert!(
+            kinds.contains(&TextNode::Task),
+            "Expected Task component but got: {kinds:?}"
+        );
     }
 }
