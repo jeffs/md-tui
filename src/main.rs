@@ -223,7 +223,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                 continue;
             }
             match handle_keyboard_input(
-                key.code,
+                &key,
                 &mut app,
                 &mut markdown,
                 &mut file_tree,
