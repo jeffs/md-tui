@@ -1,6 +1,6 @@
 use std::{cmp, fs::read_to_string};
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEvent};
 use notify::{PollWatcher, Watcher};
 
 use crate::{
@@ -22,7 +22,7 @@ pub enum KeyBoardAction {
 }
 
 pub fn handle_keyboard_input(
-    key: KeyCode,
+    key: &KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     file_tree: &mut FileTree,
@@ -30,13 +30,13 @@ pub fn handle_keyboard_input(
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     if app.theme.open {
-        return if app.theme.key(key) {
+        return if app.theme.key(key.code) {
             KeyBoardAction::ThemeChanged
         } else {
             KeyBoardAction::Continue
         };
     }
-    if key == KeyCode::Char('q') && app.boxes == Boxes::None && !app.annotation_selected {
+    if key.code == KeyCode::Char('q') && app.boxes == Boxes::None && !app.annotation_selected {
         return KeyBoardAction::Exit;
     }
     match app.mode {
@@ -46,7 +46,7 @@ pub fn handle_keyboard_input(
 }
 
 pub fn keyboard_mode_file_tree(
-    key: KeyCode,
+    key: &KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     file_tree: &mut FileTree,
@@ -56,13 +56,13 @@ pub fn keyboard_mode_file_tree(
     let header_height = u16::from(GENERAL_CONFIG.file_tree_directory_header);
     let height = height.saturating_sub(header_height);
     match app.boxes {
-        Boxes::Error => match key {
+        Boxes::Error => match key.code {
             KeyCode::Enter | KeyCode::Esc => {
                 app.boxes = Boxes::None;
             }
             _ => {}
         },
-        Boxes::Search => match key {
+        Boxes::Search => match key.code {
             KeyCode::Esc => {
                 app.search_box.clear();
                 file_tree.search(None);
@@ -204,20 +204,20 @@ pub fn keyboard_mode_file_tree(
 }
 
 fn keyboard_mode_view(
-    key: KeyCode,
+    key: &KeyEvent,
     app: &mut App,
     markdown: &mut ComponentRoot,
     height: u16,
     watcher: &mut PollWatcher,
 ) -> KeyBoardAction {
     match app.boxes {
-        Boxes::Error => match key {
+        Boxes::Error => match key.code {
             KeyCode::Enter | KeyCode::Esc => {
                 app.boxes = Boxes::None;
             }
             _ => {}
         },
-        Boxes::Search => match key {
+        Boxes::Search => match key.code {
             KeyCode::Esc => {
                 app.search_box.clear();
                 app.boxes = Boxes::None;
@@ -715,16 +715,16 @@ fn keyboard_mode_view(
     KeyBoardAction::Continue
 }
 
-fn view_action(key: KeyCode, annotation_selected: bool) -> Action {
-    if key == KeyCode::Char('q') && annotation_selected {
+fn view_action(key: &KeyEvent, annotation_selected: bool) -> Action {
+    if key.code == KeyCode::Char('q') && annotation_selected {
         Action::Escape
     } else {
         key_to_action(key)
     }
 }
 
-fn close_link_preview(key: KeyCode, app: &mut App) {
-    if matches!(key, KeyCode::Esc | KeyCode::Char('q')) {
+fn close_link_preview(key: &KeyEvent, app: &mut App) {
+    if matches!(key.code, KeyCode::Esc | KeyCode::Char('q')) {
         app.boxes = Boxes::None;
     }
 }
@@ -775,11 +775,11 @@ mod tests {
     #[test]
     fn q_maps_to_escape_only_in_annotation_mode() {
         assert!(matches!(
-            view_action(KeyCode::Char('q'), true),
+            view_action(&KeyEvent::from(KeyCode::Char('q')), true),
             Action::Escape
         ));
         assert!(matches!(
-            view_action(KeyCode::Char('q'), false),
+            view_action(&KeyEvent::from(KeyCode::Char('q')), false),
             Action::None
         ));
     }
@@ -790,14 +790,14 @@ mod tests {
             let mut app = App::default();
             app.boxes = Boxes::LinkPreview;
             app.annotation_selected = true;
-            close_link_preview(key, &mut app);
+            close_link_preview(&KeyEvent::from(key), &mut app);
             assert_eq!(app.boxes, Boxes::None);
             assert!(app.annotation_selected);
         }
 
         let mut app = App::default();
         app.boxes = Boxes::LinkPreview;
-        close_link_preview(KeyCode::Enter, &mut app);
+        close_link_preview(&KeyEvent::from(KeyCode::Enter), &mut app);
         assert_eq!(app.boxes, Boxes::LinkPreview);
     }
 
