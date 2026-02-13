@@ -11,6 +11,7 @@ use general::GENERAL_CONFIG;
 use crate::boxes::{errorbox::ErrorBox, help_box::HelpBox, linkbox::LinkBox, searchbox::SearchBox};
 
 pub mod colors;
+pub mod custom;
 pub mod general;
 pub mod keys;
 
