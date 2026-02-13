@@ -290,23 +290,34 @@ impl ComponentRoot {
                 && kind != TextNode::LineBreak
                 && next.kind() != TextNode::LineBreak
             {
-                let next_ids: Vec<u32> = match next {
-                    Component::TextComponent(tc) => tc.owning_details_ids().to_vec(),
-                    Component::Image(_) => Vec::new(),
-                };
-                // An inserted LineBreak inherits the longest common
-                // outermost prefix of its two neighbors' owning-details
-                // chains, so it is hidden iff both neighbors are inside
-                // the same folded `<details>` body.
-                let shared_ids: Vec<u32> = curr_ids
-                    .iter()
-                    .zip(next_ids.iter())
-                    .take_while(|(a, b)| a == b)
-                    .map(|(a, _)| *a)
-                    .collect();
-                let mut lb = TextComponent::new(TextNode::LineBreak, Vec::new());
-                lb.set_owning_details_ids(shared_ids);
-                components.push(Component::TextComponent(lb));
+                // Don't insert LineBreak between Task and its
+                // indented subitems
+                let is_task_with_subitems = kind == TextNode::Task
+                    && matches!(
+                        next,
+                        Component::TextComponent(tc)
+                            if tc.is_indented_list()
+                    );
+
+                if !is_task_with_subitems {
+                    let next_ids: Vec<u32> = match next {
+                        Component::TextComponent(tc) => tc.owning_details_ids().to_vec(),
+                        Component::Image(_) => Vec::new(),
+                    };
+                    // An inserted LineBreak inherits the longest common
+                    // outermost prefix of its two neighbors' owning-details
+                    // chains, so it is hidden iff both neighbors are inside
+                    // the same folded `<details>` body.
+                    let shared_ids: Vec<u32> = curr_ids
+                        .iter()
+                        .zip(next_ids.iter())
+                        .take_while(|(a, b)| a == b)
+                        .map(|(a, _)| *a)
+                        .collect();
+                    let mut lb = TextComponent::new(TextNode::LineBreak, Vec::new());
+                    lb.set_owning_details_ids(shared_ids);
+                    components.push(Component::TextComponent(lb));
+                }
             }
         }
         Self {
