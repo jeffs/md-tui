@@ -639,7 +639,7 @@ impl MdParseEnum {
 impl From<Rule> for MdParseEnum {
     fn from(value: Rule) -> Self {
         match value {
-            Rule::word | Rule::h_word | Rule::latex_word | Rule::t_word => Self::Word,
+            Rule::word | Rule::h_word | Rule::latex_word | Rule::t_word | Rule::escaped_marker => Self::Word,
             Rule::indent => Self::Indent,
             Rule::italic_word_var_1 | Rule::italic_word_var_2 => Self::Italic,
             Rule::italic_var_1 | Rule::italic_var_2 => Self::ItalicStr,

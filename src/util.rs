@@ -142,16 +142,105 @@ pub enum Jump {
 }
 
 #[cfg(test)]
-#[test]
-fn test_jump_history() {
-    let mut jump_history = JumpHistory::default();
-    jump_history.push(Jump::File("file".to_string()));
-    jump_history.push(Jump::File("file2".to_string()));
-    jump_history.push(Jump::FileTree);
-    assert_eq!(jump_history.pop(), Jump::FileTree);
-    assert_eq!(jump_history.pop(), Jump::File("file2".to_string()));
-    assert_eq!(jump_history.pop(), Jump::File("file".to_string()));
-    assert_eq!(jump_history.pop(), Jump::FileTree);
-    assert_eq!(jump_history.pop(), Jump::FileTree);
-    assert_eq!(jump_history.pop(), Jump::FileTree);
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jump_history() {
+        let mut jump_history = JumpHistory::default();
+        jump_history.push(Jump::File("file".to_string()));
+        jump_history.push(Jump::File("file2".to_string()));
+        jump_history.push(Jump::FileTree);
+        assert_eq!(jump_history.pop(), Jump::FileTree);
+        assert_eq!(jump_history.pop(), Jump::File("file2".to_string()));
+        assert_eq!(jump_history.pop(), Jump::File("file".to_string()));
+        assert_eq!(jump_history.pop(), Jump::FileTree);
+        assert_eq!(jump_history.pop(), Jump::FileTree);
+        assert_eq!(jump_history.pop(), Jump::FileTree);
+    }
+
+    // T11: jump_history_empty_pops_filetree — covered by test_jump_history above
+    // (the last 3 asserts verify empty-pop → FileTree). Not duplicated per spec.
+
+    #[test]
+    fn link_type_internal() {
+        let link = LinkType::from("#heading");
+        assert!(matches!(link, LinkType::Internal("#heading")));
+    }
+
+    #[test]
+    fn link_type_external_http() {
+        let link = LinkType::from("https://example.com/page.html");
+        assert!(matches!(link, LinkType::External("https://example.com/page.html")));
+    }
+
+    #[test]
+    fn link_type_markdown_file_md() {
+        let link = LinkType::from("other.md");
+        assert!(matches!(link, LinkType::MarkdownFile("other.md")));
+    }
+
+    #[test]
+    fn link_type_markdown_file_no_ext() {
+        let link = LinkType::from("other");
+        assert!(matches!(link, LinkType::MarkdownFile("other")));
+    }
+
+    #[test]
+    fn link_type_external_dot_rs() {
+        let link = LinkType::from("file.rs");
+        assert!(matches!(link, LinkType::External("file.rs")));
+    }
+
+    #[test]
+    fn app_reset_clears_state() {
+        let mut app = App::default();
+        app.vertical_scroll = 42;
+        app.selected = true;
+        app.select_index = 7;
+        app.boxes = Boxes::Search;
+
+        app.reset();
+
+        assert_eq!(app.vertical_scroll, 0);
+        assert!(!app.selected);
+        assert_eq!(app.select_index, 0);
+        assert_eq!(app.boxes, Boxes::None);
+    }
+
+    #[test]
+    fn app_set_width_clamps_to_config() {
+        let mut app = App::default();
+        let max = GENERAL_CONFIG.width;
+
+        // Setting width far above config max should clamp
+        app.set_width(u16::MAX);
+        assert_eq!(app.width(), max);
+
+        // Setting width below config max should use the given value
+        if max > 10 {
+            app.set_width(10);
+            assert_eq!(app.width(), 10);
+        }
+    }
+
+    #[test]
+    fn app_set_width_returns_changed() {
+        let mut app = App::default();
+
+        // First set: 0 → some value, should return true (unless width was already 50)
+        let changed = app.set_width(50);
+        // Default width is 0, so 0 → min(50, config.width) should change
+        assert!(changed, "expected change from default width");
+
+        // Set same value again: no change
+        let current = app.width();
+        let changed = app.set_width(current);
+        assert!(!changed, "expected no change when setting same width");
+
+        // Set different value: should change
+        let new = if current > 1 { current - 1 } else { current + 1 };
+        let changed = app.set_width(new);
+        assert!(changed, "expected change when setting different width");
+    }
 }
