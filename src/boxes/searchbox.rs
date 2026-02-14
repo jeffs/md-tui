@@ -95,6 +95,70 @@ impl Default for SearchBox {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn searchbox_insert_delete() {
+        let mut sb = SearchBox::new();
+        sb.insert('a');
+        sb.insert('b');
+        sb.insert('c');
+        assert_eq!(sb.content_str(), "abc");
+        assert_eq!(sb.cursor, 3);
+
+        sb.delete();
+        assert_eq!(sb.content_str(), "ab");
+        assert_eq!(sb.cursor, 2);
+
+        // delete on empty is a no-op
+        sb.delete();
+        sb.delete();
+        sb.delete();
+        assert_eq!(sb.content_str(), "");
+        assert_eq!(sb.cursor, 0);
+    }
+
+    #[test]
+    fn searchbox_clear() {
+        let mut sb = SearchBox::new();
+        sb.insert('x');
+        sb.insert('y');
+        assert_eq!(sb.cursor, 2);
+
+        sb.clear();
+        assert_eq!(sb.content_str(), "");
+        assert_eq!(sb.cursor, 0);
+    }
+
+    #[test]
+    fn searchbox_consume() {
+        let mut sb = SearchBox::new();
+        sb.insert('h');
+        sb.insert('i');
+
+        let consumed = sb.consume();
+        assert_eq!(consumed, "hi");
+        // consume clears the box
+        assert_eq!(sb.content_str(), "");
+        assert_eq!(sb.cursor, 0);
+    }
+
+    #[test]
+    fn searchbox_content_empty_is_none() {
+        let sb = SearchBox::new();
+        assert_eq!(sb.content(), None);
+    }
+
+    #[test]
+    fn searchbox_content_nonempty_is_some() {
+        let mut sb = SearchBox::new();
+        sb.insert('z');
+        assert_eq!(sb.content(), Some("z"));
+    }
+}
+
 impl Widget for SearchBox {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let paragraph = Paragraph::new(self.text)
