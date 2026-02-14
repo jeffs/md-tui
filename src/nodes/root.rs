@@ -374,3 +374,308 @@ impl ComponentProps for Component {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::nodes::word::{MetaData, Word, WordType};
+
+    /// Helper: build a TextComponent with pre-formatted content lines and a given height.
+    fn tc_formatted(kind: TextNode, lines: Vec<Vec<Word>>) -> TextComponent {
+        TextComponent::new_formatted(kind, lines)
+    }
+
+    /// Helper: build a simple paragraph TextComponent from a flat word list.
+    fn tc(kind: TextNode, words: Vec<Word>) -> TextComponent {
+        TextComponent::new(kind, words)
+    }
+
+    fn word(s: &str, wt: WordType) -> Word {
+        Word::new(s.to_string(), wt)
+    }
+
+    fn root(components: Vec<Component>) -> ComponentRoot {
+        ComponentRoot::new(None, components)
+    }
+
+    // ── height ──────────────────────────────────────────────────
+
+    #[test]
+    fn height_sums_children() {
+        // new_formatted sets height = number of lines
+        let c1 = tc_formatted(
+            TextNode::Paragraph,
+            vec![
+                vec![word("line1", WordType::Normal)],
+                vec![word("line2", WordType::Normal)],
+            ],
+        );
+        let c2 = tc_formatted(
+            TextNode::Paragraph,
+            vec![vec![word("line3", WordType::Normal)]],
+        );
+        let r = root(vec![c1.into(), c2.into()]);
+        assert_eq!(r.height(), 3);
+    }
+
+    // ── num_links ───────────────────────────────────────────────
+
+    #[test]
+    fn num_links() {
+        // num_links counts LinkData and FootnoteInline in meta_info.
+        // TextComponent::new filters non-renderable words into meta_info,
+        // but FootnoteInline is also copied to meta_info despite being renderable.
+        let c1 = tc(
+            TextNode::Paragraph,
+            vec![
+                word("click ", WordType::Normal),
+                word("here", WordType::Link),
+                word("https://example.com", WordType::LinkData),
+            ],
+        );
+        let c2 = tc(
+            TextNode::Paragraph,
+            vec![
+                word("see", WordType::Normal),
+                word("[1]", WordType::FootnoteInline),
+            ],
+        );
+        let r = root(vec![c1.into(), c2.into()]);
+        assert_eq!(r.num_links(), 2);
+    }
+
+    // ── select / deselect ───────────────────────────────────────
+
+    #[test]
+    fn select_deselect() {
+        let c = tc(
+            TextNode::Paragraph,
+            vec![
+                word("click ", WordType::Normal),
+                word("here", WordType::Link),
+                word("https://example.com", WordType::LinkData),
+            ],
+        );
+        let mut r = root(vec![c.into()]);
+        // Transform to give height (select returns y_offset, which requires set_scroll first)
+        r.set_scroll(0);
+
+        // Select the first (only) link
+        assert!(r.select(0).is_ok());
+
+        // The link word should now be Selected
+        let selected_words: Vec<_> = r
+            .words()
+            .into_iter()
+            .filter(|w| w.kind() == WordType::Selected)
+            .collect();
+        assert!(!selected_words.is_empty());
+
+        // Deselect restores original type
+        r.deselect();
+        let selected_after: Vec<_> = r
+            .words()
+            .into_iter()
+            .filter(|w| w.kind() == WordType::Selected)
+            .collect();
+        assert!(selected_after.is_empty());
+    }
+
+    #[test]
+    fn select_out_of_bounds() {
+        let c = tc(
+            TextNode::Paragraph,
+            vec![
+                word("text", WordType::Normal),
+                word("link", WordType::Link),
+                word("url", WordType::LinkData),
+            ],
+        );
+        let mut r = root(vec![c.into()]);
+        assert!(r.select(5).is_err());
+    }
+
+    // ── words ───────────────────────────────────────────────────
+
+    #[test]
+    fn words_flattens_all() {
+        let c1 = tc_formatted(
+            TextNode::Paragraph,
+            vec![
+                vec![word("a", WordType::Normal)],
+                vec![word("b", WordType::Bold)],
+            ],
+        );
+        let c2 = tc_formatted(
+            TextNode::Paragraph,
+            vec![vec![word("c", WordType::Italic)]],
+        );
+        let r = root(vec![c1.into(), c2.into()]);
+        let all: Vec<&str> = r.words().iter().map(|w| w.content()).collect();
+        assert_eq!(all, vec!["a", "b", "c"]);
+    }
+
+    // ── find_footnote ───────────────────────────────────────────
+
+    #[test]
+    fn find_footnote_found() {
+        // A Footnote component has FootnoteData meta + Footnote-typed words.
+        // find_footnote looks for kind == TextNode::Footnote, then checks
+        // meta_info first element content matches, then collects Footnote words.
+        let c = tc(
+            TextNode::Footnote,
+            vec![
+                word("1", WordType::FootnoteData),
+                word("This is the footnote.", WordType::Footnote),
+            ],
+        );
+        let r = root(vec![c.into()]);
+        assert_eq!(r.find_footnote("1"), "This is the footnote.");
+    }
+
+    #[test]
+    fn find_footnote_not_found() {
+        let c = tc(
+            TextNode::Footnote,
+            vec![
+                word("1", WordType::FootnoteData),
+                word("content", WordType::Footnote),
+            ],
+        );
+        let r = root(vec![c.into()]);
+        assert_eq!(r.find_footnote("999"), "Footnote not found");
+    }
+
+    // ── heading_offset ──────────────────────────────────────────
+
+    #[test]
+    fn heading_offset_found() {
+        // heading_offset strips the leading '#' from the search string,
+        // then compares with compare_heading. We need a Heading component
+        // whose content words match.
+        // The heading search expects format "#slug" where slug is built from
+        // lowercase words joined with '-'. We pass "#title" and the heading
+        // content is ["Title"].
+        let h = tc_formatted(
+            TextNode::Heading,
+            vec![vec![word("Title", WordType::Normal)]],
+        );
+        let p = tc_formatted(
+            TextNode::Paragraph,
+            vec![
+                vec![word("some", WordType::Normal)],
+                vec![word("text", WordType::Normal)],
+            ],
+        );
+        let r = root(vec![h.into(), p.into()]);
+        // heading_offset accumulates y from component heights.
+        // The heading itself is height 1 (new_formatted with 1 line).
+        // It's the first component, so offset should be 0.
+        assert_eq!(r.heading_offset("#title"), Ok(0));
+    }
+
+    #[test]
+    fn heading_offset_not_found() {
+        let h = tc_formatted(
+            TextNode::Heading,
+            vec![vec![word("Title", WordType::Normal)]],
+        );
+        let r = root(vec![h.into()]);
+        assert!(r.heading_offset("#nonexistent").is_err());
+    }
+
+    // ── add_missing_components ──────────────────────────────────
+
+    #[test]
+    fn add_missing_components_inserts_linebreaks() {
+        // Two adjacent paragraphs (neither is LineBreak) should get a
+        // LineBreak inserted between them.
+        let c1 = tc(TextNode::Paragraph, vec![word("a", WordType::Normal)]);
+        let c2 = tc(TextNode::Paragraph, vec![word("b", WordType::Normal)]);
+        let r = root(vec![c1.into(), c2.into()]).add_missing_components();
+
+        let kinds: Vec<TextNode> = r.components().iter().map(|c| c.kind()).collect();
+        assert_eq!(
+            kinds,
+            vec![TextNode::Paragraph, TextNode::LineBreak, TextNode::Paragraph]
+        );
+    }
+
+    #[test]
+    fn add_missing_components_task_sublist_no_linebreak() {
+        // A Task followed by an indented List should NOT get a LineBreak.
+        // is_indented_list requires kind == List and meta_info containing
+        // a word whose content is whitespace-only and non-empty.
+        let task = tc(TextNode::Task, vec![word("todo", WordType::Normal)]);
+
+        // Build an indented list: it needs a meta_info word with whitespace
+        // content (trim is empty but content is non-empty).
+        let indented_list = tc(
+            TextNode::List,
+            vec![
+                word("  ", WordType::MetaInfo(MetaData::Other)),
+                word("sub", WordType::Normal),
+                word("• ", WordType::ListMarker),
+                word("  ", WordType::MetaInfo(MetaData::UList)),
+            ],
+        );
+        assert!(
+            indented_list.is_indented_list(),
+            "precondition: should be recognized as indented list"
+        );
+
+        let r = root(vec![task.into(), indented_list.into()]).add_missing_components();
+        let kinds: Vec<TextNode> = r.components().iter().map(|c| c.kind()).collect();
+        // No LineBreak should be inserted between Task and indented List
+        assert_eq!(kinds, vec![TextNode::Task, TextNode::List]);
+    }
+
+    // ── set_scroll ──────────────────────────────────────────────
+
+    #[test]
+    fn set_scroll_propagates() {
+        let c1 = tc_formatted(
+            TextNode::Paragraph,
+            vec![
+                vec![word("line1", WordType::Normal)],
+                vec![word("line2", WordType::Normal)],
+            ],
+        ); // height = 2
+        let c2 = tc_formatted(
+            TextNode::Paragraph,
+            vec![vec![word("line3", WordType::Normal)]],
+        ); // height = 1
+        let mut r = root(vec![c1.into(), c2.into()]);
+
+        let scroll_value = 5;
+        r.set_scroll(scroll_value);
+
+        let comps = r.components();
+        // First component: y_offset = 0, scroll_offset = 5
+        assert_eq!(comps[0].y_offset(), 0);
+        assert_eq!(comps[0].scroll_offset(), scroll_value);
+        // Second component: y_offset = 2 (first component's height), scroll_offset = 5
+        assert_eq!(comps[1].y_offset(), 2);
+        assert_eq!(comps[1].scroll_offset(), scroll_value);
+    }
+
+    // ── content ─────────────────────────────────────────────────
+
+    #[test]
+    fn content_returns_lines() {
+        let c1 = tc_formatted(
+            TextNode::Paragraph,
+            vec![
+                vec![word("hello ", WordType::Normal), word("world", WordType::Bold)],
+                vec![word("second", WordType::Normal)],
+            ],
+        );
+        let c2 = tc_formatted(
+            TextNode::Paragraph,
+            vec![vec![word("third", WordType::Normal)]],
+        );
+        let r = root(vec![c1.into(), c2.into()]);
+        let lines = r.content();
+        assert_eq!(lines, vec!["hello world", "second", "third"]);
+    }
+}

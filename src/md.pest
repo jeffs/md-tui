@@ -94,14 +94,15 @@ italic_var_2 = {
 }
 italic = _{ italic_var_1 | italic_var_2 }
 
-sentence          = _{ (latex | footnote_ref_container | code | link | bold_italic | italic | bold | strikethrough | normal+)+ }
-t_sentence        = _{ (!"|" ~ (latex | footnote_ref_container | code | link | bold_italic | italic | bold | strikethrough | t_normal))+ }
-footnote_sentence = _{ ((":" | (NEWLINE ~ "  ")) ~ WHITESPACE_S* ~ (latex | code | link | bold_italic | italic | bold | strikethrough | normal+))+ }
+escaped_marker    =  { "\\" ~ ("**" | "***" | "*" | "~~" | "$" | "_") }
+sentence          = _{ (escaped_marker | latex | footnote_ref_container | code | link | bold_italic | italic | bold | strikethrough | normal+)+ }
+t_sentence        = _{ (!"|" ~ (escaped_marker | latex | footnote_ref_container | code | link | bold_italic | italic | bold | strikethrough | t_normal))+ }
+footnote_sentence = _{ ((":" | (NEWLINE ~ "  ")) ~ WHITESPACE_S* ~ (escaped_marker | latex | code | link | bold_italic | italic | bold | strikethrough | normal+))+ }
 
 table_cell      = { !table_separator ~ "|" ~ WHITESPACE_S* ~ t_sentence* ~ WHITESPACE_S* ~ ("|" ~ " "* ~ NEWLINE)? }
 table_separator = { ("|"? ~ (WHITESPACE_S | ":")* ~ "-"+ ~ (WHITESPACE_S | ":")* ~ "|") }
 
-u_list = { indent ~ ("-" | "*" | "+") ~ WHITESPACE_S ~ sentence+ }
+u_list = { indent ~ !task_prefix ~ ("-" | "*" | "+") ~ WHITESPACE_S ~ sentence+ }
 o_list = { indent ~ o_list_counter ~ sentence+ }
 
 // Headings
