@@ -272,6 +272,170 @@ pub fn key_to_action(event: &KeyEvent) -> Action {
     Action::None
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    // -- parse_key_string tests --
+
+    #[test]
+    fn parse_key_string_char() {
+        let kb = parse_key_string("k").unwrap();
+        assert_eq!(kb.key, KeyCode::Char('k'));
+        assert_eq!(kb.modifiers, KeyModifiers::NONE);
+    }
+
+    #[test]
+    fn parse_key_string_space() {
+        let kb = parse_key_string("space").unwrap();
+        assert_eq!(kb.key, KeyCode::Char(' '));
+        assert_eq!(kb.modifiers, KeyModifiers::NONE);
+    }
+
+    #[test]
+    fn parse_key_string_ctrl() {
+        let kb = parse_key_string("C-e").unwrap();
+        assert_eq!(kb.key, KeyCode::Char('e'));
+        assert_eq!(kb.modifiers, KeyModifiers::CONTROL);
+    }
+
+    #[test]
+    fn parse_key_string_tab() {
+        let kb = parse_key_string("tab").unwrap();
+        assert_eq!(kb.key, KeyCode::Tab);
+        assert_eq!(kb.modifiers, KeyModifiers::NONE);
+    }
+
+    #[test]
+    fn parse_key_string_enter() {
+        let kb = parse_key_string("enter").unwrap();
+        assert_eq!(kb.key, KeyCode::Enter);
+        assert_eq!(kb.modifiers, KeyModifiers::NONE);
+    }
+
+    #[test]
+    fn parse_key_string_esc() {
+        let kb = parse_key_string("esc").unwrap();
+        assert_eq!(kb.key, KeyCode::Esc);
+        assert_eq!(kb.modifiers, KeyModifiers::NONE);
+    }
+
+    #[test]
+    fn parse_key_string_empty() {
+        assert!(parse_key_string("").is_none());
+    }
+
+    #[test]
+    fn parse_key_string_invalid() {
+        // Multi-char non-keyword string is not a valid key
+        assert!(parse_key_string("xyz").is_none());
+    }
+
+    // -- KeyBinding::matches tests --
+
+    #[test]
+    fn keybinding_matches_exact() {
+        let kb = KeyBinding::from_char('k');
+        let event = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
+        assert!(kb.matches(&event));
+    }
+
+    #[test]
+    fn keybinding_matches_ignores_shift() {
+        // A Ctrl binding should match even when the terminal also reports SHIFT
+        let kb = KeyBinding {
+            key: KeyCode::Char('e'),
+            modifiers: KeyModifiers::CONTROL,
+        };
+        let event = KeyEvent::new(
+            KeyCode::Char('e'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
+        assert!(kb.matches(&event));
+    }
+
+    #[test]
+    fn keybinding_no_false_positive() {
+        let kb = KeyBinding::from_char('k');
+        let event = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
+        assert!(!kb.matches(&event));
+    }
+
+    // -- Display tests --
+
+    #[test]
+    fn keybinding_display() {
+        assert_eq!(
+            KeyBinding {
+                key: KeyCode::Char('e'),
+                modifiers: KeyModifiers::CONTROL,
+            }
+            .to_string(),
+            "C-e"
+        );
+        assert_eq!(
+            KeyBinding::from_char(' ').to_string(),
+            "space"
+        );
+        assert_eq!(
+            KeyBinding::from_char('k').to_string(),
+            "k"
+        );
+    }
+
+    // -- key_to_action tests --
+
+    #[test]
+    fn key_to_action_arrow_keys() {
+        // Arrow keys are hardcoded — not affected by config
+        let up = KeyEvent::new(KeyCode::Up, KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&up), Action::Up));
+
+        let down = KeyEvent::new(KeyCode::Down, KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&down), Action::Down));
+
+        let left = KeyEvent::new(KeyCode::Left, KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&left), Action::PageUp));
+
+        let right = KeyEvent::new(KeyCode::Right, KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&right), Action::PageDown));
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&enter), Action::Enter));
+
+        let esc = KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&esc), Action::Escape));
+    }
+
+    #[test]
+    fn key_to_action_configurable() {
+        // Assumption: KEY_CONFIG uses default bindings (no user config override).
+        // Default vim bindings: j→Down, k→Up, f→Search, s→SelectLink, etc.
+        let j = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&j), Action::Down));
+
+        let k = KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&k), Action::Up));
+
+        let f = KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&f), Action::Search));
+
+        let s = KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&s), Action::SelectLink));
+
+        let e = KeyEvent::new(KeyCode::Char('e'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&e), Action::Edit));
+
+        let g = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&g), Action::ToTop));
+
+        // Unbound key should return None
+        let z = KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE);
+        assert!(matches!(key_to_action(&z), Action::None));
+    }
+}
+
 pub static KEY_CONFIG: LazyLock<KeyConfig> = LazyLock::new(|| {
     let config_dir = dirs::home_dir().unwrap();
     let config_file = config_dir
