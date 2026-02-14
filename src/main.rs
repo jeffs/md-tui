@@ -272,41 +272,41 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
     };
     f.render_widget(file_tree, area);
 
-    let area = if app.help_box.expanded() {
-        Rect {
-            x: x + 2,
-            y: size.height.saturating_sub(14),
-            height: cmp::min(13, size.height),
-            width: app.width().saturating_sub(5),
-        }
-    } else {
-        Rect {
-            x: x + 2,
-            y: size.height.saturating_sub(4),
-            height: cmp::min(3, size.height),
-            width: app.width() - 5,
-        }
-    };
-
-    f.render_widget(Clear, area);
-
-    let area = if app.help_box.expanded() {
-        Rect {
-            x: x + 2,
-            y: size.height.saturating_sub(13),
-            height: cmp::min(10, size.height),
-            width: app.width().saturating_sub(5),
-        }
-    } else {
-        Rect {
-            x: x + 2,
-            y: size.height.saturating_sub(5),
-            height: cmp::min(3, size.height),
-            width: app.width() - 5,
-        }
-    };
-
     if GENERAL_CONFIG.help_menu {
+        let area = if app.help_box.expanded() {
+            Rect {
+                x: x + 2,
+                y: size.height.saturating_sub(14),
+                height: cmp::min(13, size.height),
+                width: app.width().saturating_sub(5),
+            }
+        } else {
+            Rect {
+                x: x + 2,
+                y: size.height.saturating_sub(4),
+                height: cmp::min(3, size.height),
+                width: app.width() - 5,
+            }
+        };
+
+        f.render_widget(Clear, area);
+
+        let area = if app.help_box.expanded() {
+            Rect {
+                x: x + 2,
+                y: size.height.saturating_sub(13),
+                height: cmp::min(10, size.height),
+                width: app.width().saturating_sub(5),
+            }
+        } else {
+            Rect {
+                x: x + 2,
+                y: size.height.saturating_sub(5),
+                height: cmp::min(3, size.height),
+                width: app.width() - 5,
+            }
+        };
+
         f.render_widget(app.help_box, area);
     }
 }
@@ -327,9 +327,14 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
         }
     };
 
+    let content_height = if GENERAL_CONFIG.help_menu {
+        size.height.saturating_sub(5)
+    } else {
+        size.height
+    };
     let area = Rect {
         width: cmp::min(app.width() - 3, size.width - 1),
-        height: size.height.saturating_sub(5),
+        height: content_height,
         x,
         ..size
     };
@@ -380,47 +385,46 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
         }
     }
 
-    // Render a block at the bottom to show the current mode
-    let block = Block::default().bg(Color::Black);
-    let area = if app.help_box.expanded() {
-        Rect {
-            y: size.height.saturating_sub(19),
-            height: cmp::min(18, size.height),
-            x,
-            width: area.width - 1,
-        }
-    } else {
-        Rect {
-            y: size.height.saturating_sub(4),
-            height: cmp::min(3, size.height),
-            x,
-            width: area.width - 1,
-        }
-    };
-    f.render_widget(Clear, area);
-
     if GENERAL_CONFIG.help_menu {
+        // Render a block at the bottom to show the current mode
+        let block = Block::default().bg(Color::Black);
+        let area = if app.help_box.expanded() {
+            Rect {
+                y: size.height.saturating_sub(19),
+                height: cmp::min(18, size.height),
+                x,
+                width: area.width - 1,
+            }
+        } else {
+            Rect {
+                y: size.height.saturating_sub(4),
+                height: cmp::min(3, size.height),
+                x,
+                width: area.width - 1,
+            }
+        };
+        f.render_widget(Clear, area);
         f.render_widget(block, area);
-    }
 
-    let area = if app.help_box.expanded() {
-        Rect {
-            x: x + 2,
-            y: size.height.saturating_sub(18),
-            height: cmp::min(16, size.height),
-            width: app.width() - 5,
-        }
-    } else {
-        Rect {
-            x: x + 2,
-            y: size.height.saturating_sub(3),
-            height: cmp::min(3, size.height),
-            width: app.width() - 5,
-        }
-    };
+        let area = if app.help_box.expanded() {
+            Rect {
+                x: x + 2,
+                y: size.height.saturating_sub(18),
+                height: cmp::min(16, size.height),
+                width: app.width() - 5,
+            }
+        } else {
+            Rect {
+                x: x + 2,
+                y: size.height.saturating_sub(3),
+                height: cmp::min(3, size.height),
+                width: app.width() - 5,
+            }
+        };
 
-    if app.boxes != Boxes::Search && GENERAL_CONFIG.help_menu {
-        f.render_widget(app.help_box, area);
+        if app.boxes != Boxes::Search {
+            f.render_widget(app.help_box, area);
+        }
     }
 }
 

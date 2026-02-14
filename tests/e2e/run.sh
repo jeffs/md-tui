@@ -38,12 +38,18 @@ mkdir -p "$SNAPSHOTS_DIR"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
+# Isolated HOME so the user's config.toml does not affect tests.
+# The MDT_* env vars below provide all needed configuration.
+E2E_HOME="$(mktemp -d)"
+trap 'rm -rf "$E2E_HOME"' EXIT
+
 # start_mdt SESSION_NAME [ARGS...]
 #   Creates a detached tmux session with 80x24 geometry and runs mdt inside it.
+#   Uses a clean HOME to avoid the host's config file.
 start_mdt() {
     local session="$1"; shift
     tmux new-session -d -s "$session" -x 80 -y 24 \
-        "MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY $*; sleep 86400"
+        "HOME=$E2E_HOME MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY $*; sleep 86400"
     # Wait for mdt to render its first frame
     sleep 2
 }
@@ -138,7 +144,7 @@ start_mdt_stdin() {
     # Use printf with %s to avoid interpretation of backslashes/specials.
     # The outer double-quotes around the tmux command handle variable expansion.
     tmux new-session -d -s "$session" -x 80 -y 24 \
-        "printf '%s' \"$input\" | MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY; sleep 86400"
+        "printf '%s' \"$input\" | HOME=$E2E_HOME MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY; sleep 86400"
     sleep 1
 }
 
@@ -216,6 +222,23 @@ scenario_quit_from_view() {
     compare "$name" "$output"
 }
 
+# help_menu_false: Open kitchen_sink.md with help_menu=false via config, verify
+# content fills the space that the help menu would have occupied.
+scenario_help_menu_false() {
+    local session="$1" name="$2"
+    # Write a config with help_menu disabled into the isolated HOME.
+    mkdir -p "$E2E_HOME/.config/mdt"
+    printf 'help_menu = false\n' > "$E2E_HOME/.config/mdt/config.toml"
+    tmux new-session -d -s "$session" -x 80 -y 24 \
+        "HOME=$E2E_HOME MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY $FIXTURES_DIR/kitchen_sink.md; sleep 86400"
+    sleep 2
+    local output
+    output="$(capture "$session")"
+    # Restore clean config for subsequent scenarios.
+    rm -f "$E2E_HOME/.config/mdt/config.toml"
+    compare "$name" "$output"
+}
+
 # stdin_pipe: Pipe "# Hello" to mdt, capture rendered output.
 scenario_stdin_pipe() {
     local session="$1" name="$2"
@@ -233,6 +256,7 @@ run_scenario "search_flow"       scenario_search_flow
 run_scenario "search_no_results" scenario_search_no_results
 run_scenario "link_select"       scenario_link_select
 run_scenario "quit_from_view"    scenario_quit_from_view
+run_scenario "help_menu_false"   scenario_help_menu_false
 run_scenario "stdin_pipe"        scenario_stdin_pipe
 
 # ── Summary ─────────────────────────────────────────────────────────

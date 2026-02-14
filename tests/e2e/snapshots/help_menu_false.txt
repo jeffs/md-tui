@@ -17,6 +17,8 @@
   1. Ordered item
   2. Another item
 
+  ❌  Open task
 
+  ✅  Completed task
 
-    ? - Help
+  Link text WikiLink https://inline.link
