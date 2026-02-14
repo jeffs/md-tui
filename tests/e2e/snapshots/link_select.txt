@@ -1,0 +1,24 @@
+    • Nested item                                                             │
+  1. Ordered item                                                             │
+  2. Another item                                                             │
+                                                                              │
+  ❌  Open task                                                               │
+                                                                              │
+  ✅  Completed task                                                          ┃
+                                                                              ┃
+  Link text WikiLink https://inline.link                                      ┃
+                                                                              ┃
+  ╭───────┬───────╮                                                           ┃
+  │ Col A │ Col B │                                                           ┃
+  ├───────┼───────┤                                                           ┃
+  │ 1     │ 2     │                                                           ┃
+  ╰───────┴───────╯                                                           ┃
+                                                                              ┃
+                                                                              │
+   fn main() {                                                                │
+       println!("Hello");                                                     │
+   }                                                                          │
+                                                                              │
+                                                                              │
+  Text with footnote1.                                                        │
+                                                                              │
