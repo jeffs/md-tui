@@ -36,6 +36,8 @@ mod tsx;
 mod typescript;
 #[cfg(feature = "tree-sitter-yaml")]
 mod yaml;
+#[cfg(feature = "tree-sitter-diff")]
+mod diff;
 
 use tree_sitter_highlight::HighlightEvent;
 
@@ -153,6 +155,9 @@ pub fn highlight_code(language: &str, lines: &[u8]) -> HighlightInfo {
 
         #[cfg(feature = "tree-sitter-yaml")]
         "yaml" | "yml" => HighlightInfo::Highlighted(yaml::highlight_yaml(lines).unwrap()),
+
+        #[cfg(feature = "tree-sitter-diff")]
+        "diff" | "patch" => HighlightInfo::Highlighted(diff::highlight_diff(lines).unwrap()),
 
         _ => HighlightInfo::Unhighlighted,
     }
