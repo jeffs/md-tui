@@ -59,6 +59,7 @@ Read these as needed:
 | `src/util/keys.rs` | `KeyBinding`, `KeyConfig`, `key_to_action` |
 | `src/util/general.rs` | `GENERAL_CONFIG` (upstream options) |
 | `src/util/custom.rs` | `CUSTOM_CONFIG`, `Flavor`, `SearchStyle` |
+| `src/util/layout.rs` | `content_x` |
 | `src/boxes/searchbox.rs` | `SearchBox` widget |
 | `src/pages/file_explorer.rs` | `FileTree`, `MdFile` |
 | `src/highlight/mod.rs` | `highlight_code`, `HighlightInfo` |
