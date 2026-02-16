@@ -14,6 +14,7 @@ pub mod colors;
 pub mod custom;
 pub mod general;
 pub mod keys;
+pub mod layout;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Mode {
