@@ -181,13 +181,30 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
                 }
             }
             if app.boxes == Boxes::Search {
-                let (search_height, search_width) = app.search_box.dimensions();
+                let size = f.area();
+                let cx = content_x(size.width);
+                let (search_x, search_width) = match app.mode {
+                    Mode::View => {
+                        let w = cmp::min(
+                            app.width().saturating_sub(3),
+                            size.width.saturating_sub(cx + 1),
+                        );
+                        (cx, w)
+                    }
+                    Mode::FileTree => {
+                        let x = cx + 8;
+                        let w = cmp::min(20, size.width.saturating_sub(x + 1));
+                        (x, w)
+                    }
+                };
+                let (search_height, _) = app.search_box.dimensions();
                 let search_area = Rect {
-                    x: app.search_box.x(),
+                    x: search_x,
                     y: app.search_box.y(),
                     width: search_width,
                     height: search_height,
                 };
+                f.render_widget(Clear, search_area);
                 f.render_widget(app.search_box.clone(), search_area);
             } else if app.boxes == Boxes::Error {
                 let (error_height, error_width) = app.message_box.dimensions();
@@ -251,20 +268,13 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App, tick_rate: Duration) ->
     }
 }
 
+fn content_x(terminal_width: u16) -> u16 {
+    util::general::content_x(terminal_width, GENERAL_CONFIG.width, &GENERAL_CONFIG.centering)
+}
+
 fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
     let size = f.area();
-    let x = match GENERAL_CONFIG.centering {
-        util::general::Centering::Left => 2,
-        util::general::Centering::Center => {
-            let x = (size.width / 2).saturating_sub(GENERAL_CONFIG.width / 2);
-
-            if x > 2 { x } else { 2 }
-        }
-        util::general::Centering::Right => {
-            let x = size.width.saturating_sub(GENERAL_CONFIG.width + 2);
-            if x > 2 { x } else { 2 }
-        }
-    };
+    let x = content_x(size.width);
     let area = Rect {
         x,
         width: app.width() - 3,
@@ -313,19 +323,7 @@ fn render_file_tree(f: &mut Frame, app: &App, file_tree: FileTree) {
 
 fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
     let size = f.area();
-
-    let x = match GENERAL_CONFIG.centering {
-        util::general::Centering::Left => 2,
-        util::general::Centering::Center => {
-            let x = (size.width / 2).saturating_sub(GENERAL_CONFIG.width / 2);
-
-            if x > 2 { x } else { 2 }
-        }
-        util::general::Centering::Right => {
-            let x = size.width.saturating_sub(GENERAL_CONFIG.width + 2);
-            if x > 2 { x } else { 2 }
-        }
-    };
+    let x = content_x(size.width);
 
     let content_height = if GENERAL_CONFIG.help_menu {
         size.height.saturating_sub(5)

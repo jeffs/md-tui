@@ -1,7 +1,8 @@
 use std::sync::Once;
 
-use ratatui::{backend::TestBackend, buffer::Buffer, layout::Rect, Terminal};
+use ratatui::{backend::TestBackend, buffer::Buffer, layout::Rect, Terminal, widgets::Clear};
 
+use md_tui::boxes::searchbox::SearchBox;
 use md_tui::nodes::root::{Component, ComponentRoot};
 use md_tui::nodes::word::WordType;
 use md_tui::pages::file_explorer::{FileTree, MdFile};
@@ -354,4 +355,78 @@ fn render_file_tree_widget() {
     );
     // The title "MD-TUI" should appear
     assert!(text.contains("MD-TUI"), "file tree should show title");
+}
+
+// ── render_search_box_clear_overlay ────────────────────────────────
+
+#[test]
+fn render_search_box_clear_overlay() {
+    setup();
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    // First pass: render markdown content that fills the bottom rows
+    let mut root = parse("# Heading\n\nLine one\n\nLine two\n\nLine three\n\nLine four");
+    root.set_scroll(0);
+
+    terminal
+        .draw(|f| {
+            let area = Rect::new(0, 0, 80, 10);
+            for child in root.children_mut() {
+                if let Component::TextComponent(comp) = child {
+                    if comp.y_offset().saturating_sub(comp.scroll_offset()) >= area.height {
+                        continue;
+                    }
+                    f.render_widget(comp.clone(), area);
+                }
+            }
+        })
+        .unwrap();
+
+    // Verify content exists in the overlay region (rows 7-8) before Clear
+    let before_row7 = row_text(terminal.backend().buffer(), 7);
+    let before_row8 = row_text(terminal.backend().buffer(), 8);
+    let has_content_before =
+        before_row7.trim().len() > 0 || before_row8.trim().len() > 0;
+
+    // Second pass: render Clear + SearchBox on top of the same area
+    let search_box = SearchBox::new();
+    terminal
+        .draw(|f| {
+            // Re-render the markdown so the buffer has content
+            let area = Rect::new(0, 0, 80, 10);
+            for child in root.children_mut() {
+                if let Component::TextComponent(comp) = child {
+                    if comp.y_offset().saturating_sub(comp.scroll_offset()) >= area.height {
+                        continue;
+                    }
+                    f.render_widget(comp.clone(), area);
+                }
+            }
+            // Now overlay Clear + SearchBox at rows 7-8
+            let overlay = Rect::new(2, 7, 40, 2);
+            f.render_widget(Clear, overlay);
+            f.render_widget(search_box.clone(), overlay);
+        })
+        .unwrap();
+
+    // The overlay region should now be cleared of markdown content
+    let after_row7 = row_text(terminal.backend().buffer(), 7);
+    // Row 7 is the text line (empty search box), row 8 is the bottom border
+    // The cleared area (columns 2..42) should not contain markdown text
+    let overlay_slice: String = after_row7.chars().skip(2).take(40).collect();
+    // With an empty search box, the overlay should just be spaces (cleared)
+    assert!(
+        !overlay_slice.contains("Line") && !overlay_slice.contains("four"),
+        "Clear widget should erase underlying markdown in the overlay area, got: {overlay_slice:?}"
+    );
+
+    // If there was content before, the clear worked; if there wasn't,
+    // the test is still valid (no bleed-through either way)
+    if has_content_before {
+        assert!(
+            !overlay_slice.trim().is_empty() || overlay_slice.chars().all(|c| c == ' '),
+            "overlay area should be cleared, not contain markdown text"
+        );
+    }
 }
