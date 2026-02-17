@@ -22,6 +22,7 @@ tree-sitter = [
   "tree-sitter-c",
   "tree-sitter-cpp",
   "tree-sitter-css",
+  "tree-sitter-diff",
   "tree-sitter-elixir",
   "tree-sitter-go",
   "tree-sitter-html",
@@ -36,7 +37,7 @@ tree-sitter = [
   "tree-sitter-rust",
   "tree-sitter-scala",
   "tree-sitter-typescript",
-  "tree-sitter-yaml"
+  "tree-sitter-yaml",
 ]
 network = ["ureq"]
 
@@ -77,6 +78,7 @@ tree-sitter-rust = { version = "0.24.0", optional = true }
 tree-sitter-scala = { version = "0.24.0", optional = true }
 tree-sitter-typescript = { version = "0.23.2", optional = true }
 tree-sitter-yaml = { version = "0.7.2", optional = true }
+tree-sitter-diff = { version = "0.1.0", optional = true }
 
 [build-dependencies]
 cc="1"
