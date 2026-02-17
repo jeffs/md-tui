@@ -560,6 +560,22 @@ pub(crate) fn word_wrapping<'a>(
     let mut line = Vec::new();
     let mut line_len = 0;
     for word in words {
+        // A leading newline in word content means a hard line break
+        // (Claude flavor preserves \n; CommonMark converts it to
+        // space before reaching here, so this only fires for Claude).
+        if word.content().starts_with('\n') {
+            lines.push(std::mem::take(&mut line));
+            line_len = 0;
+            let trimmed = word.content().trim_start_matches('\n');
+            if !trimmed.is_empty() {
+                let mut w = word.clone();
+                w.set_content(trimmed.to_owned());
+                line_len = display_width(trimmed);
+                line.push(w);
+            }
+            continue;
+        }
+
         let word_len = display_width(word.content());
         if line_len + word_len <= width {
             line_len += word_len;
@@ -1800,6 +1816,35 @@ mod tests {
         }
 
         TextComponent::new_formatted(TextNode::Table(vec![], vec![]), flat)
+    }
+
+    #[test]
+    fn transform_table_unbalanced_fits() {
+        // 2 columns, header + 1 data row. Content is short → fits without balancing.
+        // After new_formatted: separator entries (meta-only) are filtered out,
+        // leaving 2 header cells + 2 data cells = 4 entries
+        // column_count = 2, row_count = 2 (header, data)
+        let mut tc = make_table(2, vec![
+            vec![vec![word("A", WordType::Normal)], vec![word("B", WordType::Normal)]],
+            vec![vec![word("C", WordType::Normal)], vec![word("D", WordType::Normal)]],
+        ]);
+        // Width 80 is plenty for single-char cells
+        tc.transform(80);
+
+        if let TextNode::Table(widths, heights) = tc.kind() {
+            assert_eq!(widths.len(), 2, "should have 2 column widths");
+            // 2 rows: header and data (separator entries removed as empty after meta extraction)
+            assert_eq!(heights.len(), 2, "should have 2 row heights (header + data)");
+            // Each column's natural width is 1 (single char)
+            assert_eq!(widths[0], 1);
+            assert_eq!(widths[1], 1);
+            // No wrapping needed → each row height is 1
+            assert!(heights.iter().all(|&h| h == 1));
+        } else {
+            panic!("expected Table variant, got {:?}", tc.kind());
+        }
+
+        assert_eq!(tc.height(), 5, "2 rows × 1 line each + 3 (separator + borders)");
     }
 
     #[test]

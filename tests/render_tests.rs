@@ -430,3 +430,34 @@ fn render_search_box_clear_overlay() {
         );
     }
 }
+
+// ── render_hard_wrapped_paragraph ──────────────────────────────────
+
+#[test]
+fn render_hard_wrapped_paragraph_has_spaces() {
+    let input = "Get FreqTrade running from source at `~/git/freqtrade` and\n\
+                 configured to trade on Hyperliquid.";
+    let buf = render_to_buffer(input, 80, 10);
+    let text = buffer_text(&buf);
+    assert!(
+        !text.contains("andconfigured"),
+        "hard-wrapped line should not jam 'and' and 'configured' together, got:\n{text}"
+    );
+}
+
+// ── render_hard_wrapped_bold_has_space ─────────────────────────────
+
+#[test]
+fn render_hard_wrapped_bold_has_space() {
+    let buf = render_to_buffer("**bold\ntext**", 80, 10);
+    let text = buffer_text(&buf);
+    assert!(
+        text.contains("bold") && text.contains("text"),
+        "bold words should appear in buffer"
+    );
+    // The two words must not be jammed together
+    assert!(
+        !text.contains("boldtext"),
+        "hard-wrapped bold should not render 'boldtext', got:\n{text}"
+    );
+}
