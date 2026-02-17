@@ -344,6 +344,22 @@ fn word_wrapping<'a>(
     let mut line = Vec::new();
     let mut line_len = 0;
     for word in words {
+        // A leading newline in word content means a hard line break
+        // (Claude flavor preserves \n; CommonMark converts it to
+        // space before reaching here, so this only fires for Claude).
+        if word.content().starts_with('\n') {
+            lines.push(std::mem::take(&mut line));
+            line_len = 0;
+            let trimmed = word.content().trim_start_matches('\n');
+            if !trimmed.is_empty() {
+                let mut w = word.clone();
+                w.set_content(trimmed.to_owned());
+                line_len = display_width(trimmed);
+                line.push(w);
+            }
+            continue;
+        }
+
         let word_len = display_width(word.content());
         if line_len + word_len <= width {
             line_len += word_len;

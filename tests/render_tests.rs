@@ -430,3 +430,49 @@ fn render_search_box_clear_overlay() {
         );
     }
 }
+
+// ── render_hard_wrapped_paragraph ──────────────────────────────────
+
+#[test]
+fn render_hard_wrapped_paragraph_has_spaces() {
+    let input = "Get FreqTrade running from source at `~/git/freqtrade` and\n\
+                 configured to trade on Hyperliquid.";
+    let buf = render_to_buffer(input, 80, 10);
+    let text = buffer_text(&buf);
+    assert!(
+        !text.contains("andconfigured"),
+        "hard-wrapped line should not jam 'and' and 'configured' together, got:\n{text}"
+    );
+}
+
+#[test]
+fn render_phase0_setup_no_jammed_words() {
+    let content = std::fs::read_to_string("var/phase0-setup.md")
+        .expect("var/phase0-setup.md should exist");
+    let buf = render_to_buffer(&content, 80, 120);
+    let text = buffer_text(&buf);
+    eprintln!("FULL RENDER:\n{text}");
+
+    // Check all known hard-wrap boundaries in the file
+    assert!(!text.contains("andconfigured"), "line 5→6 jammed: {text}");
+    assert!(!text.contains("extrasas"), "line 37→38 jammed");
+    assert!(!text.contains("`secret`as"), "line 74→75 jammed");
+    assert!(!text.contains("secretas"), "line 74→75 jammed (no backtick)");
+}
+
+// ── render_hard_wrapped_bold_has_space ─────────────────────────────
+
+#[test]
+fn render_hard_wrapped_bold_has_space() {
+    let buf = render_to_buffer("**bold\ntext**", 80, 10);
+    let text = buffer_text(&buf);
+    assert!(
+        text.contains("bold") && text.contains("text"),
+        "bold words should appear in buffer"
+    );
+    // The two words must not be jammed together
+    assert!(
+        !text.contains("boldtext"),
+        "hard-wrapped bold should not render 'boldtext', got:\n{text}"
+    );
+}

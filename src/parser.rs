@@ -457,7 +457,40 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
             leaf_nodes.push(node);
         }
     } else {
+        let is_fmt = matches!(
+            node.kind(),
+            MdParseEnum::BoldStr
+                | MdParseEnum::ItalicStr
+                | MdParseEnum::BoldItalicStr
+                | MdParseEnum::StrikethroughStr
+        );
+
+        let mut prev_was_fmt_word = false;
         for child in node.children_owned() {
+            let is_fmt_word = is_fmt
+                && matches!(
+                    child.kind(),
+                    MdParseEnum::Bold
+                        | MdParseEnum::Italic
+                        | MdParseEnum::BoldItalic
+                        | MdParseEnum::Strikethrough
+                );
+
+            // Inside formatting spans the grammar's
+            // (NEWLINE ~ quote_prefix?) alternative consumes
+            // line breaks without producing a child node.
+            // Detect the gap and re-insert the lost space.
+            if is_fmt_word
+                && prev_was_fmt_word
+                && !child.content().starts_with(' ')
+            {
+                leaf_nodes.push(ParseNode::new(
+                    MdParseEnum::Word,
+                    " ".to_owned(),
+                ));
+            }
+
+            prev_was_fmt_word = is_fmt_word;
             leaf_nodes.append(&mut get_leaf_nodes(child));
         }
     }
