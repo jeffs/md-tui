@@ -954,3 +954,178 @@ fn parse_kitchen_sink_no_panic() {
         );
     }
 }
+
+// ── hard-wrapped line joining ────────────────────────────────────────
+
+#[test]
+fn hard_wrapped_plain_text_has_space() {
+    let root = parse("foo\nbar");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("foo bar") || text.contains("foo") && text.contains(" ") && text.contains("bar"),
+        "hard-wrapped plain text should join with space, got words: {words:?}"
+    );
+}
+
+#[test]
+fn hard_wrapped_bold_has_space() {
+    let root = parse("**bold\ntext**");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("bold") && text.contains("text"),
+        "bold should contain both words, got: {words:?}"
+    );
+    // There must be a space between "bold" and "text"
+    assert!(
+        text.contains("bold text") || text.contains("bold "),
+        "hard-wrapped bold should have space between words, got: '{text}', words: {words:?}"
+    );
+}
+
+#[test]
+fn hard_wrapped_italic_has_space() {
+    let root = parse("*italic\ntext*");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("italic text") || text.contains("italic "),
+        "hard-wrapped italic should have space between words, got: '{text}', words: {words:?}"
+    );
+}
+
+#[test]
+fn hard_wrapped_strikethrough_has_space() {
+    let root = parse("~~struck\ntext~~");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("struck text") || text.contains("struck "),
+        "hard-wrapped strikethrough should have space between words, got: '{text}', words: {words:?}"
+    );
+}
+
+#[test]
+fn hard_wrapped_paragraph_render() {
+    let root = parse("This is a paragraph with\nhard-wrapped lines that should\nbe joined with spaces.");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("with hard-wrapped"),
+        "line break should become space, got: '{text}'"
+    );
+    assert!(
+        text.contains("should be"),
+        "line break should become space, got: '{text}'"
+    );
+}
+
+#[test]
+fn hard_wrapped_with_inline_code() {
+    let root = parse(
+        "Get FreqTrade running from source at `~/git/freqtrade` and\nconfigured to trade on Hyperliquid.",
+    );
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("and configured"),
+        "hard wrap after inline code should produce space, got: '{text}', words: {words:?}"
+    );
+}
+
+#[test]
+fn hard_wrapped_newline_in_word_causes_line_break() {
+    // When word content starts with \n (Claude flavor preserves these),
+    // word_wrapping should treat it as a hard line break.
+    // Test at the TextComponent level to avoid GENERAL_CONFIG poisoning.
+    use md_tui::nodes::word::Word;
+    let words = vec![
+        Word::new("foo".to_owned(), WordType::Normal),
+        Word::new("\nbar".to_owned(), WordType::Normal),
+    ];
+    let mut tc = md_tui::nodes::textcomponent::TextComponent::new(
+        TextNode::Paragraph,
+        words,
+    );
+    tc.transform(78);
+
+    let lines = tc.content();
+    // The \n should cause a line break: 2 visual lines
+    assert_eq!(
+        lines.len(), 2,
+        "leading \\n should produce 2 visual lines, got {}: {:?}",
+        lines.len(),
+        lines.iter().map(|l| l.iter().map(|w| w.content()).collect::<Vec<_>>()).collect::<Vec<_>>()
+    );
+    // Line 0 contains "foo", line 1 contains "bar"
+    let line0: String = lines[0].iter().map(|w| w.content()).collect();
+    let line1: String = lines[1].iter().map(|w| w.content()).collect();
+    assert_eq!(line0, "foo");
+    assert_eq!(line1, "bar");
+}
+
+#[test]
+fn hard_wrapped_phase0_setup() {
+    let content = std::fs::read_to_string("var/phase0-setup.md")
+        .expect("var/phase0-setup.md should exist");
+    let root = parse(&content);
+    let comps = content_components(&root);
+
+    // Find paragraph containing "FreqTrade running"
+    for comp in &comps {
+        let words = words_of(comp);
+        let text: String = words.iter().map(|(c, _)| *c).collect();
+        if text.contains("FreqTrade") && text.contains("configured") {
+            assert!(
+                text.contains("and configured") || text.contains("and "),
+                "hard-wrapped line should have space before 'configured', got: '{text}'"
+            );
+        }
+        if text.contains("extras") && text.contains("needed") {
+            assert!(
+                text.contains("extras as") || text.contains("extras "),
+                "hard-wrapped line should have space before 'as', got: '{text}'"
+            );
+        }
+    }
+}
+
+#[test]
+fn hard_wrapped_bold_italic_has_space() {
+    let root = parse("***bold\nitalic***");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    let words = words_of(comps[0]);
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("bold italic") || text.contains("bold "),
+        "hard-wrapped bold-italic should have space, got: '{text}', words: {words:?}"
+    );
+}
+
+#[test]
+fn hard_wrapped_bold_in_quote_has_space() {
+    let root = parse("> **bold\n> text**");
+    let comps = content_components(&root);
+    let quote = comps.iter().find(|c| c.kind() == TextNode::Quote);
+    assert!(quote.is_some(), "should produce a Quote component");
+    let words = words_of(quote.unwrap());
+    let text: String = words.iter().map(|(c, _)| *c).collect();
+    assert!(
+        text.contains("bold text") || text.contains("bold "),
+        "hard-wrapped bold in quote should have space, got: '{text}', words: {words:?}"
+    );
+}
