@@ -165,6 +165,7 @@ width = 100 # Set to 0 for full terminal width
 gitignore = false
 alignment = "left" # "center" | "right"
 help_menu = true # false hides it
+progress = true # false hides the scroll position indicator
 
 # Inline styling
 bold_color = "reset"

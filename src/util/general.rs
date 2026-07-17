@@ -12,6 +12,7 @@ pub struct GeneralConfig {
     pub emoji_check_marks: bool,
     pub flavor: Flavor,
     pub search_style: SearchStyle,
+    pub progress: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -136,5 +137,6 @@ pub static GENERAL_CONFIG: LazyLock<GeneralConfig> = LazyLock::new(|| {
         emoji_check_marks: settings.get::<bool>("emoji_check_marks").unwrap_or(true),
         flavor: settings.get::<Flavor>("flavor").unwrap_or_default(),
         search_style: settings.get::<SearchStyle>("search_style").unwrap_or_default(),
+        progress: settings.get::<bool>("progress").unwrap_or(true),
     }
 });

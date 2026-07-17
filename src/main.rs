@@ -28,7 +28,7 @@ use ratatui::{
     DefaultTerminal, Frame,
     layout::Rect,
     style::{Color, Stylize},
-    widgets::{Block, Clear},
+    widgets::{Block, Clear, Scrollbar, ScrollbarOrientation, ScrollbarState},
 };
 use ratatui_image::{FilterType, Resize, StatefulImage};
 
@@ -365,6 +365,30 @@ fn render_markdown(f: &mut Frame, app: &App, markdown: &mut ComponentRoot) {
                 f.render_stateful_widget(image, inner_area, img.image_mut());
             }
         }
+    }
+
+    // Render a scrollbar on the right edge showing how far into the
+    // document the viewport is. `content_length` is the maximum scroll
+    // offset (matching the clamp in the event handler) so the thumb sits
+    // at the top at scroll 0 and reaches the bottom at maximum scroll.
+    let max_scroll = markdown.height().saturating_sub(size.height / 2);
+    if GENERAL_CONFIG.progress && max_scroll > 0 {
+        let mut state = ScrollbarState::new(max_scroll as usize)
+            .viewport_content_length(area.height as usize)
+            .position(app.vertical_scroll as usize);
+
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None);
+
+        let scrollbar_area = Rect {
+            x: size.width.saturating_sub(1),
+            y: area.y,
+            width: 1,
+            height: area.height,
+        };
+
+        f.render_stateful_widget(scrollbar, scrollbar_area, &mut state);
     }
 
     // Render a block at the bottom to show the current mode
