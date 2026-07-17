@@ -565,7 +565,10 @@ fn transform_paragraph(component: &mut TextComponent, width: u16) {
     let width = match component.kind {
         TextNode::Paragraph => width as usize - 1,
         TextNode::Task => width as usize - 4,
-        TextNode::Quote => width as usize - 2,
+        // -2 for the marker bar, and -1 more to reserve the column for
+        // the leading space prepended to each line below (which
+        // `render_quote` must be able to draw without clipping).
+        TextNode::Quote => width as usize - 3,
         _ => unreachable!(),
     };
 
@@ -1460,9 +1463,7 @@ mod tests {
             word("wraps", WordType::Normal),
         ];
         // "A short quote that wraps" = 24 chars
-        // width=15, Quote → effective width = 13
-        // Line 1: "A" + " " + "short" + " " + "quote" = 13 → fits
-        // Line 2: "that" + " " + "wraps" = 10
+        // width=15, Quote → effective wrap width = 12 (width - 3)
         let mut tc = TextComponent::new(TextNode::Quote, words);
         tc.transform(15);
         assert!(tc.height() >= 2, "quote should wrap, height={}", tc.height());
@@ -1496,7 +1497,7 @@ mod tests {
             word(" ", WordType::Normal),
             word("here", WordType::Normal),
         ];
-        // Effective width for Quote = width - 2 = 18
+        // Effective wrap width for Quote = width - 3 = 17
         let mut tc = TextComponent::new(TextNode::Quote, words);
         tc.transform(20);
 
@@ -1510,6 +1511,39 @@ mod tests {
                 Some(" "),
                 "special quote first line should not get space prefix"
             );
+        }
+    }
+
+    #[test]
+    fn transform_quote_lines_fit_render_width() {
+        // Regression: every wrapped quote line, including the leading
+        // space prepended for the marker bar, must fit the content area
+        // `render_quote` draws into (width - 2). A line one column wider
+        // gets its last character clipped on render (e.g. "and" → "an").
+        let text = "This document describes the loan application system start \
+                    to finish up to and including the creation of the record \
+                    and nothing past it";
+        let mut words = Vec::new();
+        for (i, w) in text.split_whitespace().enumerate() {
+            if i > 0 {
+                words.push(word(" ", WordType::Normal));
+            }
+            words.push(word(w, WordType::Normal));
+        }
+
+        for width in 20u16..=90 {
+            let mut tc = TextComponent::new(TextNode::Quote, words.clone());
+            tc.transform(width);
+            let budget = width as usize - 2;
+            for line in tc.content() {
+                let line_width: usize = line.iter().map(|w| display_width(w.content())).sum();
+                assert!(
+                    line_width <= budget,
+                    "quote line width {line_width} exceeds render budget {budget} \
+                     at transform width {width}: {:?}",
+                    line.iter().map(|w| w.content()).collect::<Vec<_>>()
+                );
+            }
         }
     }
 
