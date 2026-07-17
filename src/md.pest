@@ -130,7 +130,7 @@ code_block          = {
     NEWLINE? ~ " "* ~ (("```" ~ programming_language? ~ code_line+ ~ " "* ~ "```") | ("~~~" ~ programming_language? ~ code_line+ ~ " "* ~ "~~~") | indented_code_block)
 }
 table               = {
-    NEWLINE? ~ table_cell+ ~ NEWLINE? ~ table_separator+ ~ (NEWLINE? ~ table_cell)*
+    NEWLINE? ~ WHITESPACE_S* ~ table_cell+ ~ NEWLINE? ~ WHITESPACE_S* ~ table_separator+ ~ (NEWLINE? ~ WHITESPACE_S* ~ table_cell)*
 }
 
 quote          = { (NEWLINE? ~ WHITESPACE_S* ~ ">" ~ ((quote_marking | sentence | " ")+ | NEWLINE))+ }
