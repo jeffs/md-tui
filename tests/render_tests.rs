@@ -308,6 +308,53 @@ fn render_link_selection() {
     );
 }
 
+// ── render_bold_link_selection ───────────────────────────────────────
+
+#[test]
+fn render_bold_link_selection() {
+    setup();
+    let backend = TestBackend::new(80, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut root = parse("**[Click here](https://example.com)**");
+    root.set_scroll(0);
+
+    // A style-wrapped link must still be found and selectable.
+    assert!(
+        root.select(0).is_ok(),
+        "should be able to select a style-wrapped link"
+    );
+
+    terminal
+        .draw(|f| {
+            let area = Rect::new(0, 0, 80, 10);
+            for child in root.children_mut() {
+                if let Component::TextComponent(comp) = child {
+                    if comp.y_offset().saturating_sub(comp.scroll_offset()) >= area.height {
+                        continue;
+                    }
+                    f.render_widget(comp.clone(), area);
+                }
+            }
+        })
+        .unwrap();
+
+    let buf = terminal.backend().buffer().clone();
+
+    assert!(
+        buffer_contains(&buf, "Click here"),
+        "selected bold link text should appear in buffer"
+    );
+
+    let has_selected = root
+        .words()
+        .iter()
+        .any(|w| w.kind() == WordType::Selected);
+    assert!(
+        has_selected,
+        "selecting a style-wrapped link should produce Selected words"
+    );
+}
+
 // ── render_file_tree_widget ─────────────────────────────────────────
 
 #[test]

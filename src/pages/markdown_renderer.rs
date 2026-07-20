@@ -123,6 +123,27 @@ fn style_word_content<'a>(word: &Word, content: impl Into<Cow<'a, str>>) -> Span
         WordType::Link | WordType::FootnoteInline => {
             Span::styled(content, Style::default().fg(color_config().link_color))
         }
+        WordType::BoldLink => Span::styled(
+            content,
+            Style::default().fg(color_config().link_color).bold(),
+        ),
+        WordType::ItalicLink => Span::styled(
+            content,
+            Style::default().fg(color_config().link_color).italic(),
+        ),
+        WordType::BoldItalicLink => Span::styled(
+            content,
+            Style::default()
+                .fg(color_config().link_color)
+                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::ITALIC),
+        ),
+        WordType::StrikethroughLink => Span::styled(
+            content,
+            Style::default()
+                .fg(color_config().link_color)
+                .add_modifier(Modifier::CROSSED_OUT),
+        ),
         WordType::Italic => Span::styled(
             content,
             Style::default().fg(color_config().italic_color).italic(),
