@@ -182,10 +182,9 @@ impl ComponentRoot {
                 let height = comp.y_offset();
                 comp.content().iter().enumerate().for_each(|(index, row)| {
                     row.iter().for_each(|c| {
-                        if matches!(
-                            c.kind(),
-                            WordType::Link | WordType::Selected | WordType::FootnoteInline
-                        ) {
+                        if c.kind().is_link()
+                            || matches!(c.kind(), WordType::Selected | WordType::FootnoteInline)
+                        {
                             indexes.push((count, height + index as u16));
                             count += 1;
                         }
