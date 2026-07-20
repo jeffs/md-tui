@@ -337,12 +337,10 @@ impl TextComponent {
         let mut selection: Vec<Vec<&mut Word>> = Vec::new();
         let mut iter = self.content.iter_mut().flatten().peekable();
         while let Some(e) = iter.peek() {
-            if matches!(e.kind(), WordType::Link | WordType::FootnoteInline) {
+            if e.kind().is_link() || e.kind() == WordType::FootnoteInline {
                 selection.push(
                     iter.by_ref()
-                        .take_while(|c| {
-                            matches!(c.kind(), WordType::Link | WordType::FootnoteInline)
-                        })
+                        .take_while(|c| c.kind().is_link() || c.kind() == WordType::FootnoteInline)
                         .collect(),
                 );
             } else {
