@@ -137,9 +137,9 @@ fn parse_details(parse_node: ParseNode, width: u16) -> Vec<Component> {
                 open_attr_present = true;
             }
             MdParseEnum::DetailsSummary => {
-                let text: String = get_leaf_nodes(child)
+                let text: String = get_leaf_nodes(child, None)
                     .into_iter()
-                    .map(|n| n.content().to_string())
+                    .map(|(n, _)| n.content().to_string())
                     .collect::<Vec<_>>()
                     .join("");
                 let trimmed = text.trim().to_string();
@@ -186,10 +186,10 @@ fn is_url(url: &str) -> bool {
 fn parse_component(parse_node: ParseNode, width: u16) -> Component {
     match parse_node.kind() {
         MdParseEnum::Image => {
-            let leaf_nodes = get_leaf_nodes(parse_node);
+            let leaf_nodes = get_leaf_nodes(parse_node, None);
             let mut alt_text = String::new();
             let mut image = None;
-            for node in leaf_nodes {
+            for (node, _style) in leaf_nodes {
                 if node.kind() == MdParseEnum::AltText {
                     node.content().clone_into(&mut alt_text);
                 } else if is_url(node.content()) {
@@ -237,49 +237,26 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
         }
 
         MdParseEnum::Task => {
-            let leaf_nodes = get_leaf_nodes(parse_node);
+            let leaf_nodes = get_leaf_nodes(parse_node, None);
             let mut words = Vec::new();
-            for node in leaf_nodes {
-                let word_type = WordType::from(node.kind());
-
-                let mut content: String = node
+            for (node, style) in leaf_nodes {
+                let content: String = node
                     .content()
                     .chars()
                     .dedup_by(|x, y| *x == ' ' && *y == ' ')
                     .collect();
 
-                if matches!(node.kind(), MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
-                    let comp = Word::new(content.clone(), WordType::LinkData);
-                    words.push(comp);
-                }
-
-                if content.starts_with(' ') {
-                    content.remove(0);
-                    let comp = Word::new(" ".to_owned(), word_type);
-                    words.push(comp);
-                }
-                words.push(Word::new(content, word_type));
+                words.extend(leaf_to_words(node.kind(), content, style));
             }
             Component::TextComponent(TextComponent::new(TextNode::Task, words))
         }
 
         MdParseEnum::Quote => {
-            let leaf_nodes = get_leaf_nodes(parse_node);
+            let leaf_nodes = get_leaf_nodes(parse_node, None);
             let mut words = Vec::new();
-            for node in leaf_nodes {
-                let word_type = WordType::from(node.kind());
-                let mut content = node.content().to_owned();
-
-                if matches!(node.kind(), MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
-                    let comp = Word::new(content.clone(), WordType::LinkData);
-                    words.push(comp);
-                }
-                if content.starts_with(' ') {
-                    content.remove(0);
-                    let comp = Word::new(" ".to_owned(), word_type);
-                    words.push(comp);
-                }
-                words.push(Word::new(content, word_type));
+            for (node, style) in leaf_nodes {
+                let content = node.content().to_owned();
+                words.extend(leaf_to_words(node.kind(), content, style));
             }
             if let Some(w) = words.first_mut() {
                 w.set_content(w.content().trim_start().to_owned());
@@ -293,7 +270,7 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
                 .chars()
                 .take_while(|c| *c == '#')
                 .count();
-            let leaf_nodes = get_leaf_nodes(parse_node);
+            let leaf_nodes = get_leaf_nodes(parse_node, None);
             let mut words = Vec::new();
 
             words.push(Word::new(
@@ -308,26 +285,15 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
                 ));
             }
 
-            for node in leaf_nodes {
-                let word_type = WordType::from(node.kind());
-                let mut content = node
+            for (node, style) in leaf_nodes {
+                let content = node
                     .content()
                     .to_owned()
                     .chars()
                     .dedup_by(|x, y| *x == ' ' && *y == ' ')
                     .collect::<String>();
 
-                if matches!(node.kind(), MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
-                    let comp = Word::new(content.clone(), WordType::LinkData);
-                    words.push(comp);
-                }
-
-                if content.starts_with(' ') {
-                    content.remove(0);
-                    let comp = Word::new(" ".to_owned(), word_type);
-                    words.push(comp);
-                }
-                words.push(Word::new(content, word_type));
+                words.extend(leaf_to_words(node.kind(), content, style));
             }
 
             if let Some(w) = words
@@ -343,23 +309,11 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
         }
 
         MdParseEnum::Paragraph => {
-            let leaf_nodes = get_leaf_nodes(parse_node);
+            let leaf_nodes = get_leaf_nodes(parse_node, None);
             let mut words = Vec::new();
-            for node in leaf_nodes {
-                let word_type = WordType::from(node.kind());
-                let mut content = node.content().to_owned();
-
-                if matches!(node.kind(), MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
-                    let comp = Word::new(content.clone(), WordType::LinkData);
-                    words.push(comp);
-                }
-
-                if content.starts_with(' ') {
-                    content.remove(0);
-                    let comp = Word::new(" ".to_owned(), word_type);
-                    words.push(comp);
-                }
-                words.push(Word::new(content, word_type));
+            for (node, style) in leaf_nodes {
+                let content = node.content().to_owned();
+                words.extend(leaf_to_words(node.kind(), content, style));
             }
             if let Some(w) = words.first_mut() {
                 w.set_content(w.content().trim_start().to_owned());
@@ -368,12 +322,12 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
         }
 
         MdParseEnum::CodeBlock => {
-            let leaf_nodes = get_leaf_nodes(parse_node);
+            let leaf_nodes = get_leaf_nodes(parse_node, None);
             let mut words = Vec::new();
 
             let mut space_indented = false;
 
-            for node in leaf_nodes {
+            for (node, _style) in leaf_nodes {
                 if node.kind() == MdParseEnum::CodeBlockStrSpaceIndented {
                     space_indented = true;
                 }
@@ -396,31 +350,24 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
             let mut words = Vec::new();
             for child in parse_node.children_owned() {
                 let kind = child.kind();
-                let leaf_nodes = get_leaf_nodes(child);
+                let leaf_nodes = get_leaf_nodes(child, None);
                 let mut inner_words = Vec::new();
-                for node in leaf_nodes {
-                    let word_type = WordType::from(node.kind());
-
-                    let mut content = match node.kind() {
-                        MdParseEnum::Indent => node.content().to_owned(),
-                        _ => node
-                            .content()
-                            .chars()
-                            .dedup_by(|x, y| *x == ' ' && *y == ' ')
-                            .collect(),
-                    };
-
-                    if matches!(node.kind(), MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
-                        let comp = Word::new(content.clone(), WordType::LinkData);
-                        inner_words.push(comp);
-                    }
-                    if content.starts_with(' ') && node.kind() != MdParseEnum::Indent {
-                        content.remove(0);
-                        let comp = Word::new(" ".to_owned(), word_type);
-                        inner_words.push(comp);
+                for (node, style) in leaf_nodes {
+                    if node.kind() == MdParseEnum::Indent {
+                        inner_words.push(Word::new(
+                            node.content().to_owned(),
+                            WordType::from(node.kind()),
+                        ));
+                        continue;
                     }
 
-                    inner_words.push(Word::new(content, word_type));
+                    let content = node
+                        .content()
+                        .chars()
+                        .dedup_by(|x, y| *x == ' ' && *y == ' ')
+                        .collect();
+
+                    inner_words.extend(leaf_to_words(node.kind(), content, style));
                 }
                 if kind == MdParseEnum::UnorderedList {
                     inner_words.push(Word::new(
@@ -458,22 +405,9 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
                     continue;
                 }
 
-                for word in get_leaf_nodes(cell) {
-                    let word_type = WordType::from(word.kind());
-                    let mut content = word.content().to_owned();
-
-                    if matches!(word.kind(), MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
-                        let comp = Word::new(content.clone(), WordType::LinkData);
-                        inner_words.push(comp);
-                    }
-
-                    if content.starts_with(' ') {
-                        content.remove(0);
-                        let comp = Word::new(" ".to_owned(), word_type);
-                        inner_words.push(comp);
-                    }
-
-                    inner_words.push(Word::new(content, word_type));
+                for (word, style) in get_leaf_nodes(cell, None) {
+                    let content = word.content().to_owned();
+                    inner_words.extend(leaf_to_words(word.kind(), content, style));
                 }
                 words.push(inner_words);
             }
@@ -508,7 +442,79 @@ fn parse_component(parse_node: ParseNode, width: u16) -> Component {
     }
 }
 
-fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
+/// The emphasis span (if any) a leaf is nested under. Threaded through
+/// `get_leaf_nodes` so a `link` found inside `**...**`/`*...*`/`_..._`/
+/// `***...***`/`~~...~~` can be tagged with the style it's wrapped in,
+/// since the flat leaf list otherwise has no way to recover that ancestry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EnclosingStyle {
+    Bold,
+    Italic,
+    BoldItalic,
+    Strikethrough,
+}
+
+impl EnclosingStyle {
+    fn from_container_kind(kind: MdParseEnum) -> Option<Self> {
+        match kind {
+            MdParseEnum::BoldStr => Some(Self::Bold),
+            MdParseEnum::ItalicStr => Some(Self::Italic),
+            MdParseEnum::BoldItalicStr => Some(Self::BoldItalic),
+            MdParseEnum::StrikethroughStr => Some(Self::Strikethrough),
+            _ => None,
+        }
+    }
+
+    fn wrap_link(self) -> WordType {
+        match self {
+            Self::Bold => WordType::BoldLink,
+            Self::Italic => WordType::ItalicLink,
+            Self::BoldItalic => WordType::BoldItalicLink,
+            Self::Strikethrough => WordType::StrikethroughLink,
+        }
+    }
+}
+
+/// Resolves a leaf's `WordType`, upgrading a link found nested under an
+/// emphasis span to the corresponding combined variant (e.g. `BoldLink`).
+/// Every other kind resolves exactly as `WordType::from(kind)` always has.
+fn resolve_leaf_word_type(kind: MdParseEnum, enclosing_style: Option<EnclosingStyle>) -> WordType {
+    match (kind, enclosing_style) {
+        (MdParseEnum::Link | MdParseEnum::WikiLink | MdParseEnum::InlineLink, Some(style)) => {
+            style.wrap_link()
+        }
+        _ => WordType::from(kind),
+    }
+}
+
+/// Expands one flattened leaf into its `Word`(s): an optional `LinkData`
+/// sidecar (`WikiLink`/`InlineLink` only), an optional leading-space `Word`
+/// if `content` starts with a space, then the leaf's own `Word`.
+fn leaf_to_words(
+    kind: MdParseEnum,
+    mut content: String,
+    enclosing_style: Option<EnclosingStyle>,
+) -> Vec<Word> {
+    let word_type = resolve_leaf_word_type(kind, enclosing_style);
+    let mut out = Vec::new();
+
+    if matches!(kind, MdParseEnum::WikiLink | MdParseEnum::InlineLink) {
+        out.push(Word::new(content.clone(), WordType::LinkData));
+    }
+
+    if content.starts_with(' ') {
+        content.remove(0);
+        out.push(Word::new(" ".to_owned(), word_type));
+    }
+
+    out.push(Word::new(content, word_type));
+    out
+}
+
+fn get_leaf_nodes(
+    node: ParseNode,
+    enclosing_style: Option<EnclosingStyle>,
+) -> Vec<(ParseNode, Option<EnclosingStyle>)> {
     let mut leaf_nodes = Vec::new();
 
     // Insert separator information between links
@@ -518,7 +524,7 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
         } else {
             ParseNode::new(MdParseEnum::Word, String::new())
         };
-        leaf_nodes.push(comp);
+        leaf_nodes.push((comp, enclosing_style));
     }
 
     if matches!(
@@ -531,7 +537,7 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
     ) && node.content().starts_with(' ')
     {
         let comp = ParseNode::new(MdParseEnum::Word, " ".to_owned());
-        leaf_nodes.push(comp);
+        leaf_nodes.push((comp, enclosing_style));
     }
 
     // For Claude flavor: preserve leading newlines in formatted text
@@ -547,7 +553,7 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
         && node.content().starts_with('\n')
     {
         let comp = ParseNode::new(MdParseEnum::Word, "\n".to_owned());
-        leaf_nodes.push(comp);
+        leaf_nodes.push((comp, enclosing_style));
     }
 
     if node.children().is_empty() {
@@ -556,7 +562,7 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
         // children, drop it rather than letting it reach
         // WordType::from() which would panic.
         if !node.kind().is_container() {
-            leaf_nodes.push(node);
+            leaf_nodes.push((node, enclosing_style));
         }
     } else {
         let is_fmt = matches!(
@@ -566,6 +572,8 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
                 | MdParseEnum::BoldItalicStr
                 | MdParseEnum::StrikethroughStr
         );
+
+        let child_style = EnclosingStyle::from_container_kind(node.kind()).or(enclosing_style);
 
         let mut prev_was_fmt_word = false;
         for child in node.children_owned() {
@@ -586,14 +594,14 @@ fn get_leaf_nodes(node: ParseNode) -> Vec<ParseNode> {
                 && prev_was_fmt_word
                 && !child.content().starts_with(' ')
             {
-                leaf_nodes.push(ParseNode::new(
-                    MdParseEnum::Word,
-                    " ".to_owned(),
+                leaf_nodes.push((
+                    ParseNode::new(MdParseEnum::Word, " ".to_owned()),
+                    child_style,
                 ));
             }
 
             prev_was_fmt_word = is_fmt_word;
-            leaf_nodes.append(&mut get_leaf_nodes(child));
+            leaf_nodes.append(&mut get_leaf_nodes(child, child_style));
         }
     }
     leaf_nodes
@@ -985,6 +993,35 @@ mod tests {
         assert!(
             kinds.iter().any(|kind| matches!(kind, TextNode::Paragraph)),
             "content after the table must remain a separate paragraph: {kinds:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_leaf_word_type_wraps_link_under_enclosing_style() {
+        assert_eq!(
+            resolve_leaf_word_type(MdParseEnum::Link, Some(EnclosingStyle::Bold)),
+            WordType::BoldLink
+        );
+        assert_eq!(
+            resolve_leaf_word_type(MdParseEnum::WikiLink, Some(EnclosingStyle::Italic)),
+            WordType::ItalicLink
+        );
+        assert_eq!(
+            resolve_leaf_word_type(MdParseEnum::InlineLink, Some(EnclosingStyle::BoldItalic)),
+            WordType::BoldItalicLink
+        );
+        assert_eq!(
+            resolve_leaf_word_type(MdParseEnum::Link, Some(EnclosingStyle::Strikethrough)),
+            WordType::StrikethroughLink
+        );
+        assert_eq!(
+            resolve_leaf_word_type(MdParseEnum::Link, None),
+            WordType::Link
+        );
+        // Non-link kinds ignore the enclosing style entirely.
+        assert_eq!(
+            resolve_leaf_word_type(MdParseEnum::Bold, Some(EnclosingStyle::Italic)),
+            WordType::Bold
         );
     }
 
