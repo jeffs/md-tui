@@ -22,6 +22,8 @@ pub enum MetaData {
 pub enum WordType {
     Bold,
     BoldItalic,
+    BoldItalicLink,
+    BoldLink,
     Code,
     CodeBlock(Color),
     CriticComment,
@@ -30,6 +32,7 @@ pub enum WordType {
     FootnoteData,
     FootnoteInline,
     Italic,
+    ItalicLink,
     Link,
     LinkData,
     ListMarker,
@@ -37,7 +40,20 @@ pub enum WordType {
     Normal,
     Selected,
     Strikethrough,
+    StrikethroughLink,
     White,
+}
+
+impl WordType {
+    /// True for a word that behaves as a link for selection/navigation
+    /// purposes, whether or not it's also wrapped in emphasis.
+    #[must_use]
+    pub fn is_link(self) -> bool {
+        matches!(
+            self,
+            Self::Link | Self::BoldLink | Self::ItalicLink | Self::BoldItalicLink | Self::StrikethroughLink
+        )
+    }
 }
 
 impl From<MdParseEnum> for WordType {
@@ -213,16 +229,20 @@ mod tests {
         let renderable = [
             WordType::Bold,
             WordType::BoldItalic,
+            WordType::BoldItalicLink,
+            WordType::BoldLink,
             WordType::Code,
             WordType::CodeBlock(Color::Reset),
             WordType::Footnote,
             WordType::FootnoteInline,
             WordType::Italic,
+            WordType::ItalicLink,
             WordType::Link,
             WordType::ListMarker,
             WordType::Normal,
             WordType::Selected,
             WordType::Strikethrough,
+            WordType::StrikethroughLink,
             WordType::White,
         ];
         for wt in renderable {
