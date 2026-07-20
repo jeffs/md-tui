@@ -623,6 +623,101 @@ fn parse_link_inline() {
     );
 }
 
+// ── styled links ──────────────────────────────────────────────────────
+
+fn assert_styled_link(input: &str, expected: WordType) {
+    let root = parse(input);
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+    assert_eq!(comps[0].kind(), TextNode::Paragraph);
+
+    let words = words_of(comps[0]);
+    let has_styled_link = words.iter().any(|(_, k)| *k == expected);
+    assert!(
+        has_styled_link,
+        "should contain {expected:?} words, got: {words:?}"
+    );
+
+    let link_text: String = words
+        .iter()
+        .filter(|(_, k)| *k == expected)
+        .map(|(c, _)| *c)
+        .collect();
+    assert!(
+        link_text.contains("Example"),
+        "styled link content should contain 'Example', got: {link_text}"
+    );
+
+    let meta = comps[0].meta_info();
+    let link_data: String = meta
+        .iter()
+        .filter(|w| w.kind() == WordType::LinkData)
+        .map(|w| w.content())
+        .collect();
+    assert!(
+        link_data.contains("http://example.com"),
+        "should have LinkData for the url, got: {link_data}"
+    );
+}
+
+#[test]
+fn parse_bold_link() {
+    assert_styled_link("**[Example](http://example.com)**", WordType::BoldLink);
+}
+
+#[test]
+fn parse_italic_star_link() {
+    assert_styled_link("*[Example](http://example.com)*", WordType::ItalicLink);
+}
+
+#[test]
+fn parse_italic_underscore_link() {
+    // italic_var_2 requires a leading space/newline boundary before the
+    // opening "_" (pre-existing grammar requirement, unrelated to links).
+    assert_styled_link("x _[Example](http://example.com)_", WordType::ItalicLink);
+}
+
+#[test]
+fn parse_bold_italic_link() {
+    assert_styled_link(
+        "***[Example](http://example.com)***",
+        WordType::BoldItalicLink,
+    );
+}
+
+#[test]
+fn parse_strikethrough_link() {
+    assert_styled_link(
+        "~~[Example](http://example.com)~~",
+        WordType::StrikethroughLink,
+    );
+}
+
+#[test]
+fn parse_bold_with_literal_brackets_not_a_link() {
+    let root = parse("**array[0] is bold**");
+    let comps = content_components(&root);
+    assert_eq!(comps.len(), 1);
+
+    let words = words_of(comps[0]);
+    assert!(
+        words
+            .iter()
+            .all(|(_, k)| *k != WordType::Link && *k != WordType::BoldLink),
+        "literal brackets with no matching (url) must not be treated as a link, got: {words:?}"
+    );
+
+    let bold_text: String = words
+        .iter()
+        .filter(|(_, k)| *k == WordType::Bold)
+        .map(|(c, _)| *c)
+        .collect();
+    assert!(
+        bold_text.contains("array[0] is bold"),
+        "got: {bold_text}"
+    );
+}
+
 // ── parse_table ─────────────────────────────────────────────────────
 
 #[test]
