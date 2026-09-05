@@ -1,0 +1,21 @@
+# Fixture config for the E2E harness.
+#
+# mdt reads $HOME/.config/mdt/config.toml, so run.sh points HOME here to
+# keep captures independent of the developer's own config. Every setting
+# that affects rendering is stated explicitly: a change to an upstream
+# default then shows up as a snapshot diff rather than silently altering
+# the captures. Keybindings are left at their defaults (j, k, f, s, q).
+
+width = 80
+alignment = "left"
+flavor = "commonmark"
+search_style = "flex"
+
+gitignore = false
+
+# Off so the help bar does not push four rows of the document out of
+# frame; the snapshots exist to cover document rendering.
+help_menu = false
+document_header = false
+scrollbar = true
+emoji_check_marks = true
