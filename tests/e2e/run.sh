@@ -14,6 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SNAPSHOTS_DIR="$SCRIPT_DIR/snapshots"
 FIXTURES_DIR="$REPO_ROOT/tests/fixtures"
+E2E_HOME="$SCRIPT_DIR/home"
 BINARY="$REPO_ROOT/target/debug/mdt"
 SESSION_PREFIX="mdt_e2e_$$"
 PASS_COUNT=0
@@ -40,10 +41,12 @@ mkdir -p "$SNAPSHOTS_DIR"
 
 # start_mdt SESSION_NAME [ARGS...]
 #   Creates a detached tmux session with 80x24 geometry and runs mdt inside it.
+#   HOME points at the fixture config so captures do not depend on the
+#   developer's own ~/.config/mdt/config.toml.
 start_mdt() {
     local session="$1"; shift
     tmux new-session -d -s "$session" -x 80 -y 24 \
-        "MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY $*; sleep 86400"
+        "HOME='$E2E_HOME' $BINARY $*; sleep 86400"
     # Wait for mdt to render its first frame
     sleep 2
 }
@@ -138,7 +141,7 @@ start_mdt_stdin() {
     # Use printf with %s to avoid interpretation of backslashes/specials.
     # The outer double-quotes around the tmux command handle variable expansion.
     tmux new-session -d -s "$session" -x 80 -y 24 \
-        "printf '%s' \"$input\" | MDT_FLAVOR=commonmark MDT_WIDTH=80 $BINARY; sleep 86400"
+        "printf '%s' \"$input\" | HOME='$E2E_HOME' $BINARY; sleep 86400"
     sleep 1
 }
 
