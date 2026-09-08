@@ -328,9 +328,9 @@ fn render_quote(area: Rect, buf: &mut Buffer, component: TextComponent, clip: Cl
                 _ => color_config().quote_default,
             })
     } else {
-        Color::White
+        color_config().quote_default
     };
-    let vertical_marker = Span::styled("\u{2588}", Style::default().fg(bar_color));
+    let vertical_marker = Span::styled("\u{2502}", Style::default().fg(bar_color));
 
     let marker_paragraph = Paragraph::new(vec![Line::from(vertical_marker); content.len()])
         .bg(color_config().quote_bg_color);
