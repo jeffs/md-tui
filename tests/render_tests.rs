@@ -177,12 +177,12 @@ fn render_quote_indented() {
         text.contains("This is a quote"),
         "quote content should appear"
     );
-    // The quote renders a vertical bar (U+2588) at position x=0, then content at x=1+
+    // The quote renders a vertical bar (U+2502) at position x=0, then content at x=1+
     // Verify the quote text does NOT start at column 0 (it's indented by the bar)
     let first_content_row = row_text(&buf, 0);
     let trimmed = first_content_row.trim_start();
     assert!(
-        first_content_row.len() > trimmed.len() || first_content_row.contains('\u{2588}'),
+        first_content_row.len() > trimmed.len() || first_content_row.contains('\u{2502}'),
         "quote should have indentation marker or vertical bar"
     );
 }
