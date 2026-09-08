@@ -5,9 +5,9 @@
   Regular paragraph with bold, italic, bold italic, strikethrough, and inline ┃
   code.                                                                       ┃
                                                                               ┃
-  █ A blockquote spanning lines                                               ┃
+  │ A blockquote spanning lines                                               ┃
                                                                               ┃
-  █ An admonition                                                             ┃
+  │ An admonition                                                             ┃
                                                                               ┃
   • Unordered item 1                                                          │
   • Unordered item 2                                                          │
