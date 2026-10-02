@@ -10,6 +10,7 @@ use pest_derive::Parser;
 use ratatui::style::Color;
 
 use crate::{
+    front_matter,
     nodes::{
         image::ImageComponent,
         root::{Component, ComponentRoot},
@@ -46,7 +47,8 @@ fn tag_owning_details(components: &mut [Component], id: u32) {
 pub struct MdParser;
 
 pub fn parse_markdown(name: Option<&str>, content: &str, width: u16) -> ComponentRoot {
-    let root: Pairs<'_, Rule> = if let Ok(file) = MdParser::parse(Rule::txt, content) {
+    let content = front_matter::as_code_block(content);
+    let root: Pairs<'_, Rule> = if let Ok(file) = MdParser::parse(Rule::txt, &content) {
         file
     } else {
         return ComponentRoot::new(name.map(str::to_string), Vec::new());
