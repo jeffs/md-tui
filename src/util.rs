@@ -15,6 +15,7 @@ pub mod custom;
 pub mod general;
 pub mod keys;
 pub mod layout;
+pub mod link_path;
 pub mod themes;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
