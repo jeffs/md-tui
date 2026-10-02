@@ -1,5 +1,6 @@
 pub mod boxes;
 pub mod event_handler;
+pub mod front_matter;
 pub mod nodes;
 pub mod pages;
 pub mod parser;
