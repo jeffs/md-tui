@@ -1,4 +1,4 @@
-use std::{cmp, fs::read_to_string};
+use std::{cmp, fs::read_to_string, path::Path};
 
 use crossterm::event::{KeyCode, KeyEvent};
 use notify::{PollWatcher, Watcher};
@@ -11,6 +11,7 @@ use crate::{
         App, Boxes, Jump, LinkType, Mode,
         general::GENERAL_CONFIG,
         keys::{Action, key_to_action},
+        link_path,
     },
 };
 
@@ -574,16 +575,13 @@ fn keyboard_mode_view(
                         };
                     }
                     LinkType::External(url) => {
-                        let _ = open::that(url);
+                        let source = markdown.file_name().map(Path::new);
+                        let _ = match link_path::existing_file(url, source) {
+                            Some(path) => open::that(path),
+                            None => open::that(url),
+                        };
                     }
                     LinkType::MarkdownFile(url) => {
-                        // Remove the first character, which is a '/'
-                        let url = if let Some(url) = url.strip_prefix('/') {
-                            url
-                        } else {
-                            url
-                        };
-
                         let (url, heading) = if let Some((url, heading)) = url.split_once('#') {
                             (url.to_string(), Some(heading.to_string().to_lowercase()))
                         } else {
@@ -595,6 +593,9 @@ fn keyboard_mode_view(
                         } else {
                             format!("{url}.md")
                         };
+                        let url = link_path::resolve(&url, markdown.file_name().map(Path::new))
+                            .to_string_lossy()
+                            .into_owned();
 
                         let text = if let Ok(file) = read_to_string(&url) {
                             app.vertical_scroll = 0;
