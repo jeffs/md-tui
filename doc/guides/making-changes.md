@@ -1,6 +1,10 @@
-# Feature Implementation Protocol
+# Making Changes
 
-You are adding a feature or making a change to `mdt`, a TUI markdown viewer in Rust.
+You are adding a feature, fixing a bug, or making another change to `mdt`, a TUI
+markdown viewer in Rust.
+
+Run tests as described in [testing.md](testing.md). "Both suites" below means
+`cargo test` and `tests/e2e/run.sh`.
 
 ## Test Discipline
 
@@ -8,19 +12,21 @@ This project has 175+ tests. You must leave it with at least as many, all passin
 
 ### Before writing any code
 
-1. Run `cargo test`. Record the count. Every test must pass.
+1. Run both suites. Record the `cargo test` count. Every test must pass.
    If any test is already failing, stop and report it — do not proceed on a broken baseline.
 
 ### After every meaningful change
 
-2. Run `cargo test` again. If you broke something, fix it before moving on.
+2. Run `cargo test` again, and the E2E suite too if the change affects what
+   the screen shows. If you broke something, fix it before moving on.
    A "meaningful change" is any edit to a `.rs` or `.pest` file. Do not batch up
    changes and test at the end — test incrementally so you know what broke what.
 
 ### Before finishing
 
-3. Write tests for every new behavior you introduced (see table below).
-4. Run `cargo test` one final time. Report the before/after count.
+3. Write tests for every new behavior you introduced (see table below). For a
+   bug fix, add a test that fails without the fix.
+4. Run both suites one final time. Report the before/after `cargo test` count.
    The count must increase. Zero regressions.
 
 ## Where to add tests
@@ -85,11 +91,8 @@ that don't depend on `GENERAL_CONFIG`.
 
 ### E2E snapshots
 
-After visual changes, update snapshots:
-
-```
-UPDATE_SNAPSHOTS=1 tests/e2e/run.sh
-```
+After visual changes, regenerate and review the snapshots as described in
+[testing.md](testing.md#changing-what-the-screen-shows).
 
 ## What makes a good test
 
