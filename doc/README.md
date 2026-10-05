@@ -10,7 +10,8 @@
 
 | Guide | When to use |
 |-------|-------------|
-| [feature-protocol.md](guides/feature-protocol.md) | Include in agent prompts when implementing features. Ensures tests are written and regressions caught. |
+| [testing.md](guides/testing.md) | How to run both test suites, and how to update E2E snapshots. Read before claiming a change is tested. |
+| [making-changes.md](guides/making-changes.md) | Include in agent prompts when implementing features or fixes. Ensures tests are written and regressions caught. |
 | [adding-languages.md](guides/adding-languages.md) | Adding tree-sitter syntax highlighting for a new language. |
 
 ## `agents/` — Parallel Agent Orchestration

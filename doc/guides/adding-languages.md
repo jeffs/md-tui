@@ -135,7 +135,9 @@ YAML matches `"yaml" | "yml"`, Bash matches `"bash" | "sh"`.
 cargo build
 ```
 
-Then view a markdown file containing a fenced code block with your language:
+Run both test suites as described in [testing.md](testing.md), and add tests
+as described in [making-changes.md](making-changes.md). Then view a
+markdown file containing a fenced code block with your language:
 
 ````markdown
 ```ruby
